@@ -1,4 +1,4 @@
-const CACHE_NAME = 'enem-planner-cache-v3';
+const CACHE_NAME = 'enem-planner-cache-v4';
 const PRECACHE_URLS = ['./', './index.html', './manifest.webmanifest', './pwa-192.svg', './pwa-512.svg'];
 
 self.addEventListener('install', (event) => {
@@ -24,15 +24,15 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
           return response;
         })
         .catch(async () => {
-          const cached = await caches.match('./index.html');
-          return cached || caches.match('./');
+          const cached = await caches.match('./index.html') || await caches.match('./');
+          return cached || Response.error();
         })
     );
     return;
