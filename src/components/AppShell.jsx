@@ -1,28 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
-import { BookIcon, ChartIcon, CloseIcon, HomeIcon, MenuIcon, MoonIcon, PenIcon, SettingsIcon, SparkIcon, SunIcon, VideoIcon } from './Icons';
+import { BookIcon, ChartIcon, HomeIcon, MoonIcon, PenIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
 import { StatusBadge } from './Ui';
 
 const navItems = [
   { to: '/', label: 'Home', icon: HomeIcon },
   { to: '/conteudos', label: 'Conteúdos', icon: BookIcon },
   { to: '/redacao', label: 'Redação', icon: PenIcon },
-  { to: '/simulados', label: 'Simulados', icon: ChartIcon },
-  { to: '/videoaulas', label: 'Videoaulas', icon: VideoIcon },
   { to: '/estatisticas', label: 'Estatísticas', icon: ChartIcon },
-  { to: '/configuracoes', label: 'Configurações', icon: SettingsIcon }
+  { to: '/videoaulas', label: 'Vídeo', icon: VideoIcon },
+  { to: '/configuracoes', label: 'Config', icon: SettingsIcon }
 ];
 
 function Brand() {
   return (
-    <div className="flex items-center gap-3">
-      <div className="grid h-12 w-12 place-items-center rounded-[18px] bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-lg font-black text-white shadow-lg shadow-[var(--glow)]">
-        E
-      </div>
-      <div className="leading-tight">
-        <strong className="block text-[15px] font-extrabold text-[var(--text)]">ENEM Planner</strong>
-        <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">mobile first dashboard</span>
+    <div className="flex items-center gap-3 rounded-[24px] border border-[var(--border)] bg-[rgba(255,255,255,0.05)] px-3 py-3">
+      <div className="min-w-0 leading-tight">
+        <strong className="block text-[14px] font-extrabold tracking-tight text-[var(--text)]">Plataforma de estudos</strong>
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--muted)]">ENEM</span>
       </div>
     </div>
   );
@@ -30,7 +26,6 @@ function Brand() {
 
 export function AppShell() {
   const { state, actions, dashboard, themePalette } = usePlanner();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
 
@@ -59,6 +54,14 @@ export function AppShell() {
     setInstallPrompt(null);
   }
 
+  const sidebarClassName = state.focusMode
+    ? 'hidden'
+    : 'hidden w-[352px] shrink-0 border-r border-[var(--border)] bg-[rgba(255,255,255,0.08)] px-4 pb-6 pt-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:flex-col';
+
+  const mobileNavClassName = state.focusMode
+    ? 'hidden'
+    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 gap-1 rounded-[24px] border border-[var(--border)] bg-[rgba(10,14,28,0.92)] px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ '--primary': themePalette.primary, '--accent': themePalette.accent, '--border': themePalette.border, '--muted': themePalette.muted, '--glow': themePalette.glow }}>
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
@@ -67,21 +70,20 @@ export function AppShell() {
       </div>
 
       <div className="mx-auto flex min-h-screen w-full max-w-[1440px]">
-        <aside className={`fixed inset-y-0 left-0 z-40 w-[86vw] max-w-[320px] border-r border-[var(--border)] bg-[rgba(255,255,255,0.08)] px-4 pb-6 pt-5 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 ${drawerOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-          <div className="mb-6 flex items-center justify-between lg:justify-start">
-            <Brand />
-            <button type="button" onClick={() => setDrawerOpen(false)} className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] bg-white/10 text-lg font-black lg:hidden">
-              <CloseIcon className="h-5 w-5" />
-            </button>
-          </div>
+        <aside className={sidebarClassName}>
+          <Brand />
 
-          <nav className="grid gap-2">
+          <button type="button" onClick={actions.toggleTheme} className="app-button-secondary mt-6 w-full justify-center gap-2">
+            {state.theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+            <span>Tema</span>
+          </button>
+
+          <nav className="mt-6 grid gap-2">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
-                onClick={() => setDrawerOpen(false)}
                 className={({ isActive }) =>
                   `flex min-h-12 items-center gap-3 rounded-2xl border px-4 text-sm font-extrabold transition ${
                     isActive
@@ -114,26 +116,41 @@ export function AppShell() {
           </div>
         </aside>
 
-        <div className="flex min-h-screen w-full flex-1 flex-col lg:pl-[320px]">
-          <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[rgba(255,255,255,0.08)] px-4 py-4 backdrop-blur-2xl lg:px-6">
-            <div className="flex items-center justify-between gap-3">
-              <button type="button" onClick={() => setDrawerOpen(true)} className="grid h-12 w-12 place-items-center rounded-2xl border border-[var(--border)] bg-white/10 text-xl font-black lg:hidden">
-                <MenuIcon className="h-5 w-5" />
-              </button>
-              <Brand />
-              <button type="button" onClick={actions.toggleTheme} className="flex h-12 items-center gap-2 rounded-2xl border border-[var(--border)] bg-white/10 px-4 text-sm font-extrabold text-[var(--text)]">
-                {state.theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-                <span className="hidden sm:inline">Tema</span>
-              </button>
-            </div>
-          </header>
-
-          <main className="flex-1 px-4 pb-8 pt-4 lg:px-6">
+        <div className={`flex min-h-screen w-full flex-1 flex-col ${state.focusMode ? 'lg:pl-0' : 'lg:pl-[352px]'}`}>
+          <main className="flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-8">
             <Outlet />
           </main>
         </div>
 
-        {drawerOpen ? <button type="button" aria-label="Fechar menu" onClick={() => setDrawerOpen(false)} className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden" /> : null}
+        <nav className={mobileNavClassName}>
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold leading-none transition ${
+                  isActive
+                    ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white shadow-lg shadow-[var(--glow)]'
+                    : 'text-[var(--muted)]'
+                }`
+              }
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="truncate">{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        {state.focusMode ? (
+          <button
+            type="button"
+            onClick={actions.toggleFocusMode}
+            className="fixed right-4 top-4 z-50 rounded-full border border-transparent bg-[linear-gradient(135deg,var(--primary),var(--accent))] px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] backdrop-blur-2xl"
+          >
+            Sair do foco
+          </button>
+        ) : null}
       </div>
     </div>
   );

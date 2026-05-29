@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { usePlanner } from '../context/PlannerContext';
-import { EmptyState, FilterChip, GlassCard, ProgressBar, SectionHeader, StatusBadge } from '../components/Ui';
+import { EmptyState, GlassCard, ProgressBar, SectionHeader, StatusBadge } from '../components/Ui';
+import { priorityMeta } from '../data/planner';
 
-const filters = [
+const statusFilters = [
   { id: 'all', label: 'Todos' },
   { id: 'done', label: 'Estudados' },
   { id: 'lost', label: 'Perdidos' },
@@ -18,22 +19,67 @@ const subjectFilters = [
   { id: 'essay', label: 'Redação' }
 ];
 
+const typeFilters = [
+  { id: 'all', label: 'Todos os tipos' },
+  { id: 'conteudo', label: 'Conteúdo' },
+  { id: 'exercicio', label: 'Exercício' },
+  { id: 'simulado', label: 'Simulado' },
+  { id: 'redacao', label: 'Redação' }
+];
+
+const priorityFilters = [
+  { id: 'all', label: 'Todas as prioridades' },
+  ...Object.entries(priorityMeta).map(([id, meta]) => ({ id, label: meta.label }))
+];
+
+function getItemType(item) {
+  if (item.subject === 'essay') return 'redacao';
+  return 'conteudo';
+}
+
+function FilterGroup({ label, value, onChange, options }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-3">
+      <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{label}</p>
+      <div className="relative mt-3">
+        <select className="input-shell appearance-none pr-10" value={value} onChange={(event) => onChange(event.target.value)}>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>{option.label}</option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">⌄</span>
+      </div>
+    </div>
+  );
+}
+
 function ContentCard({ item, status, onStatus }) {
   return (
-    <GlassCard className={`p-4 ${status === 'done' ? 'bg-emerald-500/10' : status === 'lost' ? 'bg-rose-500/10' : 'bg-white/5'}`}>
+    <GlassCard className={`p-4 sm:p-5 ${status === 'done' ? 'bg-emerald-500/10' : status === 'lost' ? 'bg-rose-500/10' : 'bg-white/5'}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Semana {item.weekNumber}</p>
           <h3 className="mt-1 text-lg font-extrabold tracking-tight text-[var(--text)]">{item.title}</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <StatusBadge status={item.priority}>{item.priorityLabel}</StatusBadge>
+            <StatusBadge status={item.priority}>{item.frequency}</StatusBadge>
+            <StatusBadge status={item.priority === 'hot' ? 'done' : item.priority === 'hard' ? 'review' : 'pending'}>{item.difficulty}</StatusBadge>
+            <StatusBadge status="pending">Importância {item.importance}/5</StatusBadge>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(item.blocks || []).map((block) => (
+              <StatusBadge key={block} status={block === 'Exercícios' ? 'simulado' : block === 'Revisão' ? 'review' : 'pending'}>{block}</StatusBadge>
+            ))}
+          </div>
         </div>
         <StatusBadge status={status}>{status}</StatusBadge>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button type="button" className="app-button-secondary" onClick={() => onStatus(item.id, 'done')}>✅</button>
-        <button type="button" className="app-button-secondary" onClick={() => onStatus(item.id, 'lost')}>⚠️</button>
-        <button type="button" className="app-button-secondary" onClick={() => onStatus(item.id, 'pending')}>⭕</button>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'done')}>Estudado</button>
+        <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'lost')}>Perdido</button>
+        <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'pending')}>Pendente</button>
       </div>
 
       <div className="mt-4">
@@ -47,6 +93,8 @@ export default function ContentsPage() {
   const { contentItems, subjectStats, state, actions } = usePlanner();
   const [statusFilter, setStatusFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -54,29 +102,32 @@ export default function ContentsPage() {
       const status = state.contentStatuses[item.id] || 'pending';
       const matchesStatus = statusFilter === 'all' || statusFilter === status;
       const matchesSubject = subjectFilter === 'all' || subjectFilter === item.subject;
+      const matchesType = typeFilter === 'all' || typeFilter === getItemType(item);
+      const matchesPriority = priorityFilter === 'all' || priorityFilter === item.priority;
       const matchesQuery = !query || `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase());
-      return matchesStatus && matchesSubject && matchesQuery;
+      return matchesStatus && matchesSubject && matchesType && matchesPriority && matchesQuery;
     });
-  }, [contentItems, query, state.contentStatuses, statusFilter, subjectFilter]);
+  }, [contentItems, priorityFilter, query, state.contentStatuses, statusFilter, subjectFilter, typeFilter]);
 
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Conteúdos" title="Banco completo de estudo" subtitle="Filtre por status, pesquise e acompanhe o progresso por matéria." />
-        <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-          <input className="input-shell w-full" placeholder="Pesquisar tema, disciplina ou descrição" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <div className="flex flex-wrap gap-2">
-            {filters.map((filter) => <FilterChip key={filter.id} active={statusFilter === filter.id} onClick={() => setStatusFilter(filter.id)}>{filter.label}</FilterChip>)}
+        <SectionHeader eyebrow="Conteúdos" title="Banco completo de estudo" subtitle="Filtros mais claros, organizados por matéria, status e tipo de conteúdo." />
+        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[24px] border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Buscar</p>
+            <input className="input-shell mt-3" placeholder="Pesquisar tema, disciplina ou descrição" value={query} onChange={(event) => setQuery(event.target.value)} />
           </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {subjectFilters.map((filter) => <FilterChip key={filter.id} active={subjectFilter === filter.id} onClick={() => setSubjectFilter(filter.id)}>{filter.label}</FilterChip>)}
+          <FilterGroup label="Matéria" value={subjectFilter} onChange={setSubjectFilter} options={subjectFilters} />
+          <FilterGroup label="Prioridade" value={priorityFilter} onChange={setPriorityFilter} options={priorityFilters} />
+          <FilterGroup label="Status" value={statusFilter} onChange={setStatusFilter} options={statusFilters} />
+          <FilterGroup label="Tipo" value={typeFilter} onChange={setTypeFilter} options={typeFilters} />
         </div>
       </GlassCard>
 
       <section className="grid gap-4 xl:grid-cols-2">
         {subjectStats.map((subject) => (
-          <GlassCard key={subject.subject} className="p-4">
+          <GlassCard key={subject.subject} className="p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{subject.label}</p>

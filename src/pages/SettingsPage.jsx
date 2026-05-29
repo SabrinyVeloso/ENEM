@@ -33,7 +33,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="mt-4 grid gap-3">
-            <input className="input-shell w-full" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Nome do perfil" />
+            <input className="input-shell w-full" value={profileName} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
             <input className="input-shell w-full" type="number" value={weeklyGoal} onChange={(event) => setWeeklyGoal(event.target.value)} min="1" max="30" placeholder="Meta semanal" />
             <input className="input-shell w-full" type="number" value={studyMinutes} onChange={(event) => setStudyMinutes(event.target.value)} min="15" max="600" step="15" placeholder="Minutos diários" />
 

@@ -1,5 +1,5 @@
 const CACHE_NAME = 'enem-planner-cache-v4';
-const PRECACHE_URLS = ['./', './index.html', './manifest.webmanifest', './pwa-192.svg', './pwa-512.svg'];
+const PRECACHE_URLS = ['./', './index.html', './manifest.webmanifest', './imagemenem.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

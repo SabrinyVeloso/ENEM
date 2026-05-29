@@ -1,157 +1,146 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePlanner } from '../context/PlannerContext';
-import { EmptyState, GlassCard, ProgressBar, SectionHeader, StatTile, StatusBadge } from '../components/Ui';
-import { formatFriendlyDate, formatLongDate, subjectMeta } from '../data/planner';
+import { EmptyState, GlassCard, ProgressBar, SectionHeader, StatusBadge } from '../components/Ui';
+import { formatLongDate } from '../data/planner';
 import PomodoroWidget from '../components/PomodoroWidget';
 
-function StudyCard({ day, status, onStatus }) {
-  const toneMap = {
-    done: 'border-emerald-500/20 bg-emerald-500/10',
-    lost: 'border-rose-500/20 bg-rose-500/10',
-    pending: 'border-[var(--border)] bg-white/5',
-    simulado: 'border-violet-500/20 bg-violet-500/10',
-    rest: 'border-slate-500/20 bg-white/5'
-  };
-
+function CompactDay({ day, status, onStatus }) {
   return (
-    <GlassCard className={`p-4 ${toneMap[status] || toneMap.pending}`}>
+    <div className="rounded-[22px] border border-[var(--border)] bg-white/5 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">
-            <span>{day.weekday}</span>
-            <span className="opacity-60">•</span>
-            <span>{formatFriendlyDate(day.date)}</span>
-          </p>
-          <h3 className="mt-1 text-lg font-extrabold tracking-tight text-[var(--text)]">{day.title}</h3>
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{day.weekday}</p>
+          <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{day.title}</strong>
           <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{day.description}</p>
+          {day.blocks ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {day.blocks.map((block) => (
+                <StatusBadge key={block} status={block === 'Exercícios' ? 'simulado' : block === 'Revisão' ? 'review' : 'pending'}>{block}</StatusBadge>
+              ))}
+              {day.focus ? <StatusBadge status={day.focus === 'Muito alta' ? 'hot' : day.focus === 'Alta' ? 'frequent' : 'medium'}>{day.focus}</StatusBadge> : null}
+            </div>
+          ) : null}
         </div>
         <StatusBadge status={status}>{status === 'rest' ? 'descanso' : status}</StatusBadge>
       </div>
 
       {day.type === 'study' ? (
-        <>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => onStatus(day.contentId, 'done')} className="app-button-secondary">
-              ✅ Estudado
-            </button>
-            <button type="button" onClick={() => onStatus(day.contentId, 'lost')} className="app-button-secondary">
-              ⚠️ Perdido
-            </button>
-            <button type="button" onClick={() => onStatus(day.contentId, 'pending')} className="app-button-secondary">
-              ⭕ Não estudado
-            </button>
-          </div>
-          <div className="mt-4">
-            <ProgressBar value={status === 'done' ? 100 : status === 'lost' ? 20 : 40} />
-          </div>
-        </>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <button type="button" onClick={() => onStatus(day.contentId, 'done')} className="app-button-secondary w-full text-xs">Estudado</button>
+          <button type="button" onClick={() => onStatus(day.contentId, 'lost')} className="app-button-secondary w-full text-xs">Perdido</button>
+          <button type="button" onClick={() => onStatus(day.contentId, 'pending')} className="app-button-secondary w-full text-xs">Pendente</button>
+        </div>
       ) : null}
-    </GlassCard>
-  );
-}
-
-function CalendarHeatmap({ heatmap }) {
-  return (
-    <GlassCard className="p-4">
-      <SectionHeader eyebrow="Calendário" title="Sequência de estudos" subtitle="Mapa visual estilo contribuição, com dias estudados, perdidos e descanso." />
-      <div className="mt-4 grid grid-cols-7 gap-2">
-        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((label) => (
-          <div key={label} className="text-center text-[10px] font-black uppercase tracking-[0.22em] text-[var(--muted)]">
-            {label}
-          </div>
-        ))}
-        {heatmap.map((day) => {
-          const colorMap = {
-            done: 'bg-emerald-400',
-            lost: 'bg-rose-400',
-            pending: 'bg-white/10',
-            rest: 'bg-slate-500/30',
-            simulado: 'bg-violet-400'
-          };
-          return <div key={day.date} title={`${formatLongDate(day.date)} - ${day.title}`} className={`aspect-square rounded-2xl border border-[var(--border)] ${colorMap[day.status] || colorMap.pending}`} />;
-        })}
-      </div>
-    </GlassCard>
+    </div>
   );
 }
 
 export default function HomePage() {
   const { dashboard, actions, state } = usePlanner();
-  const todayPlan = dashboard.currentDay;
-  const todayStatus = todayPlan.type === 'study' ? state.contentStatuses[todayPlan.contentId] || 'pending' : todayPlan.type;
+  const [showMore, setShowMore] = useState(false);
+  const displayName = state.settings.profileName?.trim() || 'Seu nome';
+
+  const currentDay = dashboard.currentDay;
+  const currentStatus = currentDay.type === 'study' ? state.contentStatuses[currentDay.contentId] || 'pending' : currentDay.type;
+  const reviewItems = dashboard.reviewItems.slice(0, 3);
+
+  const upcomingTask = useMemo(() => {
+    const nextStudy = dashboard.currentWeek.days.find((day) => day.type === 'study' && day.date > currentDay.date);
+    return nextStudy || dashboard.currentWeek.days.find((day) => day.type === 'study') || currentDay;
+  }, [currentDay.date, dashboard.currentWeek.days]);
+
+  const summaryLabel = currentDay.type === 'study' ? currentDay.title : 'Recuperação e revisão leve';
 
   return (
     <div className="grid gap-4 pb-6">
-      <section className="glass-panel grid gap-4 p-4 lg:grid-cols-[1.4fr_0.9fr] lg:p-6">
-        <div className="space-y-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--accent)]">Home / cronograma principal</p>
-          <h1 className="text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">Uma plataforma premium de estudos para o ENEM, pensada primeiro no celular.</h1>
-          <p className="max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">Acompanhe sua rotina, marque conteúdos como estudados, monitore progresso e use o calendário e o Pomodoro para manter consistência.</p>
-          <div className="flex flex-wrap gap-2">
-            <a href="#/conteudos" className="app-button-primary">Ver conteúdos</a>
-            <a href="#/estatisticas" className="app-button-secondary">Abrir estatísticas</a>
+      <GlassCard className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--muted)]">Bom dia, {displayName}</p>
+            <h1 className="max-w-xl text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">Hoje você vai estudar com foco e menos ruído.</h1>
+            <p className="max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">{summaryLabel}</p>
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge status="simulado">🔥 {dashboard.streak} dias seguidos</StatusBadge>
+              <StatusBadge status="done">{dashboard.currentWeekProgress}% da semana</StatusBadge>
+              <StatusBadge status={dashboard.daysUntilEnem > 30 ? 'pending' : 'simulado'}>{dashboard.daysUntilEnem} dias ENEM</StatusBadge>
+            </div>
+          </div>
+
+          <div className="min-w-[110px] rounded-[26px] border border-[var(--border)] bg-white/5 p-4 text-center">
+            <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--muted)]">ENEM</p>
+            <strong className="mt-2 block text-4xl font-black tracking-tight text-[var(--text)]">{dashboard.daysUntilEnem}</strong>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">dias restantes</p>
           </div>
         </div>
 
-        <GlassCard className="p-5">
-          <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--accent)]">ENEM</p>
-          <strong className="mt-2 block text-5xl font-black tracking-tight text-[var(--text)]">{dashboard.daysUntilEnem}</strong>
-          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Faltam dias para a prova.</p>
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-[22px] border border-[var(--border)] bg-white/10 p-4">
-              <span className="text-xs font-black uppercase tracking-[0.22em] text-[var(--muted)]">Meta semanal</span>
-              <strong className="mt-2 block text-2xl font-black">{state.settings.weeklyGoal} conteúdos</strong>
-            </div>
-            <div className="rounded-[22px] border border-[var(--border)] bg-white/10 p-4">
-              <span className="text-xs font-black uppercase tracking-[0.22em] text-[var(--muted)]">Sequência</span>
-              <strong className="mt-2 block text-2xl font-black">{dashboard.streak} dias</strong>
+        <div className="mt-4 grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-[22px] border border-[var(--border)] bg-white/5 p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Hoje</p>
+            <strong className="mt-2 block text-xl font-black tracking-tight text-[var(--text)]">{currentDay.title}</strong>
+            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{formatLongDate(currentDay.date)}</p>
+            <div className="mt-3">
+              <ProgressBar value={currentDay.type === 'study' ? (currentStatus === 'done' ? 100 : currentStatus === 'lost' ? 20 : 45) : 60} />
             </div>
           </div>
+
+          <div className="rounded-[22px] border border-[var(--border)] bg-white/5 p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Próxima tarefa</p>
+            <strong className="mt-2 block text-lg font-black tracking-tight text-[var(--text)]">{upcomingTask.title}</strong>
+            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{upcomingTask.description}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button type="button" className="app-button-primary" onClick={() => actions.toggleFocusMode()}>
+            {state.focusMode ? 'Sair do modo foco' : 'Entrar em modo foco'}
+          </button>
+          <button type="button" className="app-button-secondary" onClick={() => setShowMore((current) => !current)}>
+            {showMore ? 'Ocultar' : 'Ver mais'}
+          </button>
+        </div>
+      </GlassCard>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
+        <GlassCard className="p-4 sm:p-5">
+          <SectionHeader eyebrow="Hoje" title="Conteúdo atual" subtitle="Um toque para marcar o status e seguir sem distração." />
+          <div className="mt-4">
+            <CompactDay day={currentDay} status={currentStatus} onStatus={actions.setContentStatus} />
+          </div>
         </GlassCard>
-      </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Conclusão" value={`${dashboard.completion}%`} caption={`${dashboard.completed} concluídos`} tone="brand" />
-        <StatTile label="Semana" value={`${dashboard.currentWeekProgress}%`} caption="progresso da semana" tone="good" />
-        <StatTile label="Mês" value={`${dashboard.monthProgress}%`} caption="ritmo mensal" tone="warn" />
-        <StatTile label="Foco" value={`${dashboard.focusMinutes} min`} caption="Pomodoro registrado" tone="brand" />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.1fr_1.3fr]">
-        <GlassCard className="p-4">
-          <SectionHeader eyebrow="Hoje" title={formatLongDate(todayPlan.date)} subtitle="Sua prioridade do dia é esta. Marque o status com um toque." />
+        <GlassCard className="p-4 sm:p-5">
+          <SectionHeader eyebrow="Revisão" title="Revisar hoje" subtitle="Itens perdidos entram automaticamente quando vence o prazo de revisão." />
           <div className="mt-4 grid gap-3">
-            <StudyCard day={todayPlan} status={todayStatus} onStatus={actions.setContentStatus} />
+            {reviewItems.length === 0 ? (
+              <EmptyState title="Nenhum item para revisar" subtitle="Marque um conteúdo como perdido para ele retornar automaticamente depois." />
+            ) : (
+              reviewItems.map((item) => (
+                <div key={item.id} className="rounded-[22px] border border-[var(--border)] bg-white/5 p-4">
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge status={item.priority}>{item.priorityLabel}</StatusBadge>
+                    <StatusBadge status="review">Revisar</StatusBadge>
+                  </div>
+                  <p className="mt-3 text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{item.subjectLabel}</p>
+                  <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{item.title}</strong>
+                  <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Revisar amanhã</p>
+                </div>
+              ))
+            )}
           </div>
         </GlassCard>
+      </section>
 
-        <GlassCard className="p-4">
-          <SectionHeader eyebrow="Semana" title={`Semana ${dashboard.currentWeek.weekNumber}`} subtitle="Cada semana mantém matemática, linguagens, humanas, natureza e redação, com revisão leve e simulado alternado." />
+      {showMore || state.focusMode ? (
+        <GlassCard className="p-4 sm:p-5">
+          <SectionHeader eyebrow="Semana" title={`Semana ${dashboard.currentWeek.weekNumber}`} subtitle="Visão compacta da semana, escondida por padrão para manter a tela limpa." />
           <div className="mt-4 grid gap-3">
             {dashboard.currentWeek.days.map((day) => {
               const status = day.type === 'study' ? state.contentStatuses[day.contentId] || 'pending' : day.type;
-              return <StudyCard key={day.date} day={day} status={status} onStatus={actions.setContentStatus} />;
+              return <CompactDay key={day.date} day={day} status={status} onStatus={actions.setContentStatus} />;
             })}
           </div>
         </GlassCard>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <CalendarHeatmap heatmap={dashboard.heatmap} />
-        <GlassCard className="p-4">
-          <SectionHeader eyebrow="Conquistas" title="Badges da rotina" subtitle="Marcos automáticos conforme a consistência aumenta." />
-          <div className="mt-4 grid gap-3">
-            {dashboard.achievements.map((item) => (
-              <div key={item.id} className={`rounded-[24px] border p-4 ${item.done ? 'border-emerald-500/20 bg-emerald-500/10' : 'border-[var(--border)] bg-white/5'}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <strong className="text-sm font-black text-[var(--text)]">{item.label}</strong>
-                  <StatusBadge status={item.done ? 'done' : 'pending'}>{item.done ? 'ativa' : 'bloqueada'}</StatusBadge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-      </section>
+      ) : null}
 
       <PomodoroWidget />
     </div>

@@ -1,24 +1,24 @@
 {
-  "name": "ENEM Planner",
-  "short_name": "ENEM Planner",
-  "description": "App mobile-first de estudos para o ENEM com modo offline.",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#050814",
-  "theme_color": "#050814",
-  "icons": [
-    {
-      "src": "./pwa-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./pwa-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+	"name": "ENEM Planner",
+	"short_name": "ENEM Planner",
+	"description": "App mobile-first de estudos para o ENEM com modo offline.",
+	"start_url": "./",
+	"scope": "./",
+	"display": "standalone",
+	"background_color": "#050814",
+	"theme_color": "#050814",
+	"icons": [
+		{
+			"src": "./imagemenem.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "./imagemenem.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any maskable"
+		}
+	]
 }

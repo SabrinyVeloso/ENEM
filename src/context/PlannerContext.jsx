@@ -9,6 +9,7 @@ import {
   repertoires,
   schedule,
   scheduleStart,
+  priorityMeta,
   settingsDefaults,
   subjectMeta,
   themePalettes,
@@ -35,7 +36,10 @@ function createDefaultState() {
     theme: readJSON(THEME_KEY, 'dark'),
     settings: { ...settingsDefaults },
     contentStatuses: {},
-    essayDraft: { topic: essayTopics[0], text: '' },
+    reviewQueue: [],
+    reviewSchedule: {},
+    focusMode: false,
+    essayDraft: { topic: '', text: '' },
     essays: [],
     exerciseHistory: [],
     simuladoHistory: [],
@@ -49,6 +53,9 @@ function mergeState(base, incoming) {
   next.theme = incoming.theme || next.theme;
   next.settings = { ...next.settings, ...(incoming.settings || {}) };
   next.contentStatuses = { ...(incoming.contentStatuses || {}) };
+  next.reviewQueue = Array.isArray(incoming.reviewQueue) ? incoming.reviewQueue : [];
+  next.reviewSchedule = { ...(incoming.reviewSchedule || {}) };
+  next.focusMode = Boolean(incoming.focusMode);
   next.essayDraft = { ...next.essayDraft, ...(incoming.essayDraft || {}) };
   next.essays = Array.isArray(incoming.essays) ? incoming.essays : [];
   next.exerciseHistory = Array.isArray(incoming.exerciseHistory) ? incoming.exerciseHistory : [];
@@ -63,6 +70,10 @@ function saveJSON(key, value) {
 
 function getStatusOrder() {
   return ['pending', 'done', 'lost'];
+}
+
+function getReviewDueDate(days = 2) {
+  return toISODate(addDays(new Date(), days));
 }
 
 function getStudyDays() {
@@ -102,6 +113,15 @@ function buildSubjectStats(state) {
     const done = items.filter((item) => getContentStatus(state, item.id) === 'done').length;
     const lost = items.filter((item) => getContentStatus(state, item.id) === 'lost').length;
     const pending = items.length - done - lost;
+    const priorityCounts = Object.fromEntries(Object.keys(priorityMeta).map((key) => [key, 0]));
+    items.forEach((item) => {
+      const key = item.priority || 'medium';
+      priorityCounts[key] = (priorityCounts[key] || 0) + 1;
+    });
+    const strongTopics = [...items]
+      .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0))
+      .slice(0, 3)
+      .map((item) => item.title);
     return {
       subject,
       label: subjectMeta[subject].label,
@@ -109,7 +129,10 @@ function buildSubjectStats(state) {
       done,
       lost,
       pending,
-      percent: Math.round((done / items.length) * 100) || 0
+      percent: Math.round((done / items.length) * 100) || 0,
+      priorityCounts,
+      strongTopics,
+      topPriority: strongTopics[0] || topics[0]?.title || ''
     };
   });
 }
@@ -156,6 +179,11 @@ function buildDashboard(state) {
   const monthDone = monthStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const monthProgress = Math.round((monthDone / monthStudyDays.length) * 100) || 0;
   const streak = buildCurrentStreak(state);
+  const today = toISODate(new Date());
+  const reviewItems = allItems
+    .filter((item) => getContentStatus(state, item.id) === 'lost')
+    .filter((item) => !state.reviewSchedule?.[item.id] || state.reviewSchedule[item.id] <= today)
+    .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
 
   return {
     completion: Math.round((completed / allItems.length) * 100) || 0,
@@ -174,6 +202,7 @@ function buildDashboard(state) {
     heatmap: buildHeatmap(state),
     achievements: buildAchievements(state),
     focusMinutes: state.focusHistory.reduce((acc, item) => acc + item.minutes, 0),
+    reviewItems,
     essayCount: state.essays.length,
     questionCount: state.exerciseHistory.length,
     simuladoCount: state.simuladoHistory.length
@@ -225,7 +254,22 @@ export function PlannerProvider({ children }) {
           contentStatuses: {
             ...current.contentStatuses,
             [contentId]: status
-          }
+          },
+          reviewSchedule: status === 'lost'
+            ? {
+                ...current.reviewSchedule,
+                [contentId]: getReviewDueDate(2)
+              }
+            : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
+          reviewQueue: status === 'lost'
+            ? Array.from(new Set([...(current.reviewQueue || []), contentId]))
+            : (current.reviewQueue || []).filter((item) => item !== contentId)
+        }));
+      },
+      toggleFocusMode() {
+        setState((current) => ({
+          ...current,
+          focusMode: !current.focusMode
         }));
       },
       cycleContentStatus(contentId) {
@@ -237,7 +281,16 @@ export function PlannerProvider({ children }) {
             contentStatuses: {
               ...current.contentStatuses,
               [contentId]: getStatusOrder()[nextIndex]
-            }
+            },
+            reviewSchedule: getStatusOrder()[nextIndex] === 'lost'
+              ? {
+                  ...current.reviewSchedule,
+                  [contentId]: getReviewDueDate(2)
+                }
+              : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
+            reviewQueue: getStatusOrder()[nextIndex] === 'lost'
+              ? Array.from(new Set([...(current.reviewQueue || []), contentId]))
+              : (current.reviewQueue || []).filter((item) => item !== contentId)
           };
         });
       },
