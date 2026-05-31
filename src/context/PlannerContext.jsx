@@ -36,7 +36,7 @@ function readJSON(key, fallback) {
 function createDefaultState() {
   return {
     theme: readJSON(THEME_KEY, 'dark'),
-    settings: { ...settingsDefaults },
+    settings: { ...settingsDefaults, studyStartDate: toISODate(new Date()) },
     contentStatuses: {},
     reviewQueue: [],
     reviewSchedule: {},
@@ -524,22 +524,38 @@ export function PlannerProvider({ children }) {
         }));
       },
       updateSettings(settings) {
-        setState((current) => ({
-          ...current,
-          settings: {
-            ...current.settings,
-            ...settings
+        setState((current) => {
+          const merged = { ...current.settings, ...settings };
+          try {
+            const provided = merged.studyStartDate;
+            if (!provided || fromISODate(provided) > new Date()) {
+              merged.studyStartDate = toISODate(new Date());
+            }
+          } catch {
+            merged.studyStartDate = toISODate(new Date());
           }
-        }));
+          return {
+            ...current,
+            settings: merged
+          };
+        });
       },
       generateSchedule(settings) {
-        setState((current) => ({
-          ...current,
-          settings: {
-            ...current.settings,
-            ...settings
+        setState((current) => {
+          const merged = { ...current.settings, ...settings };
+          try {
+            const provided = merged.studyStartDate;
+            if (!provided || fromISODate(provided) > new Date()) {
+              merged.studyStartDate = toISODate(new Date());
+            }
+          } catch {
+            merged.studyStartDate = toISODate(new Date());
           }
-        }));
+          return {
+            ...current,
+            settings: merged
+          };
+        });
       },
       resetAll() {
         setState(createDefaultState());

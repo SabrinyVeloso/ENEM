@@ -7,6 +7,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [hoursPerDay, setHoursPerDay] = useState(90);
   const [studyStartDate, setStudyStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [studyDays, setStudyDays] = useState(['mon', 'tue', 'wed', 'thu', 'fri']);
 
 
   const studyTimeOptions = [
@@ -26,8 +27,8 @@ export default function Onboarding() {
 
   function submit() {
     const settings = {
-      studyDaysCount: 5,
-      studyDays: [],
+      studyDaysCount: Array.isArray(studyDays) ? studyDays.length : 0,
+      studyDays: Array.isArray(studyDays) ? studyDays : [],
       studyHoursPerDay: Number(hoursPerDay),
       studyStartDate,
       onboardCompleted: true
@@ -52,6 +53,23 @@ export default function Onboarding() {
 
           {step === 1 && (
             <div className="grid gap-3">
+              <p className="text-sm text-[var(--muted)]">Quais dias da semana você pretende estudar?</p>
+              <div className="flex gap-2 flex-wrap">
+                {[['dom', 'Dom'], ['mon', 'Seg'], ['tue', 'Ter'], ['wed', 'Qua'], ['thu', 'Qui'], ['fri', 'Sex'], ['sat', 'Sáb']].map(([key, label]) => {
+                  const active = studyDays.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setStudyDays((prev) => (prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]))}
+                      className={`app-button-secondary ${active ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <p className="text-sm text-[var(--muted)]">Por quanto tempo você deseja estudar?</p>
               <div className="flex gap-2 flex-wrap">
                 {studyTimeOptions.map((opt) => (
@@ -74,6 +92,7 @@ export default function Onboarding() {
               <ul className="text-sm">
                 <li>Data de início: {studyStartDate}</li>
                 <li>Tempo de estudo: {studyTimeOptions.find((option) => option.value === hoursPerDay)?.label || `${hoursPerDay} minutos`}</li>
+                <li>Dias escolhidos: {studyDays.map((d) => (d === 'dom' ? 'Dom' : d === 'mon' ? 'Seg' : d === 'tue' ? 'Ter' : d === 'wed' ? 'Qua' : d === 'thu' ? 'Qui' : d === 'fri' ? 'Sex' : 'Sáb')).join(', ')}</li>
               </ul>
 
               <p className="text-sm text-[var(--muted)]">Ao confirmar, seu cronograma será gerado automaticamente e você será levado ao painel.</p>
@@ -86,7 +105,7 @@ export default function Onboarding() {
             {step > 0 ? <button type="button" onClick={prev} className="app-button-secondary">Voltar</button> : null}
           </div>
           <div className="flex gap-2">
-            {step < 3 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
+            {step < 2 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
           </div>
         </div>
       </GlassCard>
