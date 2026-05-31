@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
-import { BookIcon, ChartIcon, HomeIcon, MoonIcon, PenIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
+import { BookIcon, ChartIcon, HomeIcon, MoonIcon, PenIcon, RefreshIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
 import { StatusBadge } from './Ui';
 import Onboarding from './Onboarding';
 
 const navItems = [
   { to: '/', label: 'Home', icon: HomeIcon },
   { to: '/conteudos', label: 'Conteúdos', icon: BookIcon },
+  { to: '/recuperacao', label: 'Recuperação', icon: RefreshIcon },
   { to: '/redacao', label: 'Redação', icon: PenIcon },
   { to: '/estatisticas', label: 'Estatísticas', icon: ChartIcon },
   { to: '/videoaulas', label: 'Vídeo', icon: VideoIcon },
@@ -76,7 +77,7 @@ export function AppShell() {
 
   const mobileNavClassName = state.focusMode
     ? 'hidden'
-    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 gap-1 rounded-[24px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
+    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 gap-1 rounded-[24px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ '--primary': themePalette.primary, '--accent': themePalette.accent, '--border': themePalette.border, '--muted': themePalette.muted, '--glow': themePalette.glow }}>

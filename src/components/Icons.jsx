@@ -94,6 +94,17 @@ export function SettingsIcon({ className = '' }) {
   );
 }
 
+export function RefreshIcon({ className = '' }) {
+  return (
+    <IconBase className={className}>
+      <path d="M4.5 12a7.5 7.5 0 0 1 12.7-5.2L19 8.6" />
+      <path d="M19.5 12a7.5 7.5 0 0 1-12.7 5.2L5 15.4" />
+      <path d="M18.8 4.5v4.2h-4.2" />
+      <path d="M5.2 19.5v-4.2h4.2" />
+    </IconBase>
+  );
+}
+
 export function WifiIcon({ className = '' }) {
   return (
     <IconBase className={className}>

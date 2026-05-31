@@ -8,6 +8,7 @@ export default function SettingsPage() {
   const [studyDaysCount, setStudyDaysCount] = useState(state.settings.studyDaysCount || (state.settings.studyDays || []).length || 5);
   const [studyDays, setStudyDays] = useState(Array.isArray(state.settings.studyDays) ? state.settings.studyDays : ['mon', 'tue', 'wed', 'thu', 'fri']);
   const [studyHoursPerDay, setStudyHoursPerDay] = useState(state.settings.studyHoursPerDay || 90);
+  const [studyStartDate, setStudyStartDate] = useState(state.settings.studyStartDate || new Date().toISOString().slice(0, 10));
   const [targetScore, setTargetScore] = useState(state.settings.targetScore || '700+');
   const [level, setLevel] = useState(state.settings.level || 'Intermediário');
 
@@ -42,6 +43,7 @@ export default function SettingsPage() {
       studyDaysCount,
       studyDays,
       studyHoursPerDay,
+      studyStartDate,
       targetScore,
       level,
       onboardCompleted: true
@@ -131,6 +133,9 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quando você quer começar a estudar?</p>
+            <input className="input-shell w-full" type="date" value={studyStartDate} onChange={(event) => setStudyStartDate(event.target.value)} />
 
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => actions.setTheme('light')} className="app-button-secondary">Tema claro</button>

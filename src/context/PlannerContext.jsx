@@ -15,6 +15,7 @@ import {
   subjectMeta,
   themePalettes,
   addDays,
+  fromISODate,
   toISODate,
   videoChannels
 } from '../data/planner';
@@ -84,6 +85,20 @@ function normalizeContentStatus(status) {
 
 function getReviewDueDate(days = 2) {
   return toISODate(addDays(new Date(), days));
+}
+
+function getTodayISO() {
+  return toISODate(new Date());
+}
+
+function getNextStudyDate(settings, fromDate = new Date()) {
+  const scheduleData = buildAdaptiveSchedule(settings);
+  const today = toISODate(fromDate);
+  const nextStudyDay = scheduleData.weeks
+    .flatMap((week) => week.days.filter((day) => day.type === 'study'))
+    .find((day) => day.date > today);
+
+  return nextStudyDay?.date || toISODate(addDays(fromDate, 2));
 }
 
 function getStudyDays(scheduleData) {
@@ -174,6 +189,91 @@ function buildCurrentStreak(state, scheduleData) {
   return streak;
 }
 
+function buildRecoveryItems(state, scheduleData) {
+  const today = getTodayISO();
+  return getContentItems(scheduleData)
+    .filter((item) => getContentStatus(state, item.id) === 'perdido')
+    .map((item) => {
+      const dueDate = state.reviewSchedule?.[item.id] || getNextStudyDate(state.settings);
+      return {
+        ...item,
+        dueDate,
+        queued: Array.isArray(state.reviewQueue) && state.reviewQueue.includes(item.id),
+        isDue: dueDate <= today
+      };
+    })
+    .sort((a, b) => {
+      if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
+      return a.dueDate.localeCompare(b.dueDate);
+    });
+}
+
+function getItemDueDate(state, item) {
+  return state.reviewSchedule?.[item.id] || item.scheduledFor || item.date;
+}
+
+function buildTodayStudyItems(state, scheduleData) {
+  const today = getTodayISO();
+  return getContentItems(scheduleData)
+    .filter((item) => item.scheduledFor === today)
+    .map((item) => ({
+      ...item,
+      status: getContentStatus(state, item.id),
+      dueDate: getItemDueDate(state, item),
+      isRescheduled: Boolean(state.reviewSchedule?.[item.id] && state.reviewSchedule[item.id] !== item.scheduledFor)
+    }))
+    .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
+}
+
+function buildOverdueItems(state, scheduleData) {
+  const today = getTodayISO();
+  return getContentItems(scheduleData)
+    .filter((item) => {
+      const status = getContentStatus(state, item.id);
+      const dueDate = getItemDueDate(state, item);
+      return status === 'perdido' || (status === 'pending' && dueDate < today);
+    })
+    .map((item) => ({
+      ...item,
+      status: getContentStatus(state, item.id),
+      dueDate: getItemDueDate(state, item),
+      isRescheduled: Boolean(state.reviewSchedule?.[item.id] && state.reviewSchedule[item.id] !== item.scheduledFor)
+    }))
+    .sort((a, b) => {
+      if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
+      return a.dueDate.localeCompare(b.dueDate);
+    });
+}
+
+function formatNextReviewLabel(dateISO) {
+  if (!dateISO) return 'Sem revisão agendada';
+  const today = getTodayISO();
+  const tomorrow = toISODate(addDays(new Date(), 1));
+  if (dateISO === today) return 'Hoje às 19h';
+  if (dateISO === tomorrow) return 'Amanhã às 19h';
+  return `${fromISODate(dateISO).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })} às 19h`;
+}
+
+function buildMotivations(state, dashboard, todayStudyItems, overdueItems) {
+  const messages = [];
+  if (todayStudyItems.length > 0 && overdueItems.length === 0) {
+    messages.push('🔥 Você já tem o caminho de hoje pronto para avançar sem atrasos.');
+  }
+  if (dashboard.completed > 0 && dashboard.progressDelta >= 0) {
+    messages.push('📈 Seu progresso está crescendo com consistência.');
+  }
+  if (dashboard.streak >= 7) {
+    messages.push(`🏆 Você está há ${dashboard.streak} dias estudando consecutivamente.`);
+  }
+  if (dashboard.completion >= 100) {
+    messages.push('🔥 Você concluiu todos os conteúdos cadastrados.');
+  }
+  if (messages.length === 0) {
+    messages.push('✨ Um passo de cada vez já mantém sua rotina viva.');
+  }
+  return messages;
+}
+
 function buildDashboard(state, scheduleData) {
   const allItems = getContentItems(scheduleData);
   const completed = allItems.filter((item) => getContentStatus(state, item.id) === 'done').length;
@@ -184,16 +284,69 @@ function buildDashboard(state, scheduleData) {
   const currentWeekStudyDays = currentWeek.days.filter((day) => day.type === 'study');
   const currentWeekDone = currentWeekStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const currentWeekProgress = Math.round((currentWeekDone / currentWeekStudyDays.length) * 100) || 0;
+  const previousWeek = scheduleData.weeks.find((week) => week.weekNumber === currentWeek.weekNumber - 1);
+  const previousWeekStudyDays = previousWeek?.days.filter((day) => day.type === 'study') || [];
+  const previousWeekDone = previousWeekStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
+  const previousWeekProgress = Math.round((previousWeekDone / previousWeekStudyDays.length) * 100) || 0;
   const currentMonthKey = new Date().toISOString().slice(0, 7);
   const monthStudyDays = buildHeatmap(state, scheduleData).filter((day) => day.date.startsWith(currentMonthKey) && day.type === 'study');
   const monthDone = monthStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const monthProgress = Math.round((monthDone / monthStudyDays.length) * 100) || 0;
   const streak = buildCurrentStreak(state, scheduleData);
   const today = toISODate(new Date());
+  const todayStudyItems = buildTodayStudyItems(state, scheduleData);
+  const overdueItems = buildOverdueItems(state, scheduleData);
   const reviewItems = allItems
     .filter((item) => getContentStatus(state, item.id) === 'perdido')
     .filter((item) => !state.reviewSchedule?.[item.id] || state.reviewSchedule[item.id] <= today)
     .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
+  const recoveryItems = buildRecoveryItems(state, scheduleData);
+  const dueRecoveryItems = recoveryItems.filter((item) => item.isDue);
+  const nextReviewItem = [...overdueItems, ...recoveryItems].sort((a, b) => {
+    if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
+    return a.dueDate.localeCompare(b.dueDate);
+  })[0] || null;
+  const nextReviewDate = nextReviewItem?.dueDate || null;
+  const hoursAccumulated = Math.round((state.focusHistory.reduce((acc, item) => acc + item.minutes, 0) / 60) * 10) / 10;
+  const progressDelta = currentWeekProgress - previousWeekProgress;
+  const reminders = [];
+
+  if (todayStudyItems.length > 0) {
+    reminders.push({ tone: 'hot', emoji: '🔥', title: `Você tem ${todayStudyItems.length} conteúdos para estudar hoje.`, description: 'Abra a seção de estudos de hoje para seguir o plano.' });
+  }
+
+  if (overdueItems.length > 0) {
+    reminders.push({ tone: 'bad', emoji: '📌', title: `Você possui ${overdueItems.length} conteúdos atrasados.`, description: 'Eles já estão prontos para revisão e reagendamento.' });
+  }
+
+  if (todayStudyItems.some((item) => item.subject === 'essay') || allItems.some((item) => item.subject === 'essay' && getContentStatus(state, item.id) !== 'done' && item.scheduledFor <= today)) {
+    reminders.push({ tone: 'review', emoji: '✍️', title: 'Está na hora de fazer uma redação.', description: 'A redação entrou na sua rotina e precisa de constância.' });
+  }
+
+  if (progressDelta > 0) {
+    reminders.push({ tone: 'good', emoji: '📈', title: 'Seu progresso aumentou esta semana.', description: 'A consistência está aparecendo nos seus resultados.' });
+  }
+
+  if (streak >= 7) {
+    reminders.push({ tone: 'simulado', emoji: '🏆', title: `Você está há ${streak} dias estudando consecutivamente.`, description: 'Essa sequência é uma vantagem real na preparação.' });
+  }
+
+  const nextReview = nextReviewDate
+    ? {
+        date: nextReviewDate,
+        label: formatNextReviewLabel(nextReviewDate),
+        title: nextReviewItem?.title || 'Próxima revisão',
+        subjectLabel: nextReviewItem?.subjectLabel || 'Revisão',
+        tone: nextReviewItem?.status === 'perdido' ? 'bad' : 'review'
+      }
+    : {
+        date: null,
+        label: 'Sem revisão agendada',
+        title: 'Nenhuma revisão pendente',
+        subjectLabel: 'Tudo em dia',
+        tone: 'done'
+      };
+  const motivations = buildMotivations(state, { completed, progressDelta, streak, completion: Math.round((completed / allItems.length) * 100) || 0 }, todayStudyItems, overdueItems);
 
   return {
     completion: Math.round((completed / allItems.length) * 100) || 0,
@@ -205,14 +358,26 @@ function buildDashboard(state, scheduleData) {
     currentDay,
     currentWeekProgress,
     monthProgress,
+    previousWeekProgress,
+    progressDelta,
     weekGoal: state.settings.weeklyGoal,
     daysUntilEnem: getDaysUntilEnem(),
     total: allItems.length,
+    hoursAccumulated,
     subjectStats: buildSubjectStats(state, scheduleData),
     heatmap: buildHeatmap(state, scheduleData),
     achievements: buildAchievements(state, scheduleData),
     focusMinutes: state.focusHistory.reduce((acc, item) => acc + item.minutes, 0),
     reviewItems,
+    todayStudyItems,
+    overdueItems,
+    reminders,
+    nextReview,
+    motivations,
+    recoveryItems,
+    dueRecoveryItems,
+    recoveryCount: recoveryItems.length,
+    dueRecoveryCount: dueRecoveryItems.length,
     essayCount: state.essays.length,
     questionCount: state.exerciseHistory.length,
     simuladoCount: state.simuladoHistory.length
@@ -269,12 +434,25 @@ export function PlannerProvider({ children }) {
           reviewSchedule: nextStatus === 'perdido'
             ? {
                 ...current.reviewSchedule,
-                [contentId]: getReviewDueDate(2)
+                [contentId]: getNextStudyDate(current.settings)
               }
             : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
           reviewQueue: nextStatus === 'perdido'
             ? Array.from(new Set([...(current.reviewQueue || []), contentId]))
             : (current.reviewQueue || []).filter((item) => item !== contentId)
+        }));
+      },
+      rescheduleLostContent(contentId) {
+        setState((current) => ({
+          ...current,
+          reviewSchedule: {
+            ...current.reviewSchedule,
+            [contentId]: getNextStudyDate(
+              current.settings,
+              current.reviewSchedule?.[contentId] ? new Date(`${current.reviewSchedule[contentId]}T00:00:00`) : new Date()
+            )
+          },
+          reviewQueue: Array.from(new Set([...(current.reviewQueue || []), contentId]))
         }));
       },
       toggleFocusMode() {
@@ -296,7 +474,7 @@ export function PlannerProvider({ children }) {
             reviewSchedule: getStatusOrder()[nextIndex] === 'perdido'
               ? {
                   ...current.reviewSchedule,
-                  [contentId]: getReviewDueDate(2)
+                  [contentId]: getNextStudyDate(current.settings)
                 }
               : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
             reviewQueue: getStatusOrder()[nextIndex] === 'perdido'

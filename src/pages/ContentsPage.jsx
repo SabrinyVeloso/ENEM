@@ -146,21 +146,7 @@ export default function ContentsPage() {
         </div>
       </GlassCard>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        {subjectStats.map((subject) => (
-          <GlassCard key={subject.subject} className="p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{subject.label}</p>
-                <strong className="mt-1 block text-2xl font-black">{subject.percent}%</strong>
-              </div>
-              <StatusBadge status={subject.percent > 50 ? 'done' : 'pending'}>{subject.done}/{subject.total}</StatusBadge>
-            </div>
-            <div className="mt-4"><ProgressBar value={subject.percent} /></div>
-            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{subject.done} estudados · {subject.pending} restantes</p>
-          </GlassCard>
-        ))}
-      </section>
+      {/* Subject summary cards removed as requested */}
 
       <section className="grid gap-4">
         {filtered.length === 0 ? (

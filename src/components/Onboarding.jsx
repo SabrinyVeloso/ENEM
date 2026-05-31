@@ -7,6 +7,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [daysOfWeek, setDaysOfWeek] = useState([]);
   const [hoursPerDay, setHoursPerDay] = useState(90);
+  const [studyStartDate, setStudyStartDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const weekdays = [
     { id: 'mon', label: 'Seg' },
@@ -42,6 +43,7 @@ export default function Onboarding() {
       studyDaysCount: daysOfWeek.length || 5,
       studyDays: daysOfWeek,
       studyHoursPerDay: Number(hoursPerDay),
+      studyStartDate,
       onboardCompleted: true
     };
     actions.updateSettings(settings);
@@ -57,6 +59,13 @@ export default function Onboarding() {
         <div className="mt-4">
           {step === 0 && (
             <div className="grid gap-3">
+              <p className="text-sm text-[var(--muted)]">Quando você quer começar a estudar?</p>
+              <input className="input-shell" type="date" value={studyStartDate} onChange={(event) => setStudyStartDate(event.target.value)} />
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="grid gap-3">
               <p className="text-sm text-[var(--muted)]">Quais dias da semana você vai estudar? (toque para selecionar)</p>
               <div className="flex gap-2 flex-wrap">
                 {weekdays.map((d) => (
@@ -66,7 +75,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 1 && (
+          {step === 2 && (
             <div className="grid gap-3">
               <p className="text-sm text-[var(--muted)]">Por quanto tempo você deseja estudar?</p>
               <div className="flex gap-2 flex-wrap">
@@ -84,10 +93,11 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="grid gap-3">
               <p className="text-sm text-[var(--muted)]">Resumo</p>
               <ul className="text-sm">
+                <li>Data de início: {studyStartDate}</li>
                 <li>Dias escolhidos: {daysOfWeek.join(', ') || 'Nenhum'}</li>
                 <li>Tempo de estudo: {studyTimeOptions.find((option) => option.value === hoursPerDay)?.label || `${hoursPerDay} minutos`}</li>
               </ul>
@@ -102,7 +112,7 @@ export default function Onboarding() {
             {step > 0 ? <button type="button" onClick={prev} className="app-button-secondary">Voltar</button> : null}
           </div>
           <div className="flex gap-2">
-            {step < 2 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
+            {step < 3 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
           </div>
         </div>
       </GlassCard>

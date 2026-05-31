@@ -5,6 +5,13 @@ import App from './App';
 import { PlannerProvider } from './context/PlannerContext';
 import './styles/index.css';
 
+if (import.meta.env.PROD) {
+  const manifestLink = document.createElement('link');
+  manifestLink.rel = 'manifest';
+  manifestLink.href = `${import.meta.env.BASE_URL}manifest.webmanifest`;
+  document.head.appendChild(manifestLink);
+}
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`);

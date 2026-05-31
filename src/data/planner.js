@@ -25,6 +25,9 @@ export const themePalettes = {
   }
 };
 
+export const scheduleStart = '2026-07-05';
+export const enemDate = '2026-11-08';
+
 export const subjectMeta = {
   math: { label: 'Matemática', short: 'Mat' },
   language: { label: 'Linguagens', short: 'Lng' },
@@ -453,15 +456,13 @@ export const settingsDefaults = {
   studyMinutes: 90,
   notifications: true,
   onboardCompleted: false,
+  studyStartDate: scheduleStart,
   studyDaysCount: 5,
   studyDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   studyHoursPerDay: 90,
   targetScore: '700+',
   level: 'Intermediário'
 };
-
-export const scheduleStart = '2026-07-05';
-export const enemDate = '2026-11-08';
 
 const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
 
@@ -712,7 +713,7 @@ function calculateTopicsPerSession(totalTopics, totalStudyDays, studyMinutes) {
 }
 
 export function buildAdaptiveSchedule(settings = {}) {
-  const start = fromISODate(scheduleStart);
+  const start = fromISODate(settings.studyStartDate || scheduleStart);
   const end = fromISODate(enemDate);
   const studyDays = normalizeStudyDays(settings.studyDays || []);
   const studyMinutes = Number(settings.studyHoursPerDay || settings.studyMinutes || 90);

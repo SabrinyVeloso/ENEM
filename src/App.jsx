@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import HomePage from './pages/HomePage';
 import ContentsPage from './pages/ContentsPage';
+import RecoveryPage from './pages/RecoveryPage';
 import EssayPage from './pages/EssayPage';
 import SimuladosPage from './pages/SimuladosPage';
 import VideoaulasPage from './pages/VideoaulasPage';
@@ -16,6 +17,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
         <Route path="conteudos" element={<ContentsPage />} />
+        <Route path="recuperacao" element={<RecoveryPage />} />
         <Route path="redacao" element={<EssayPage />} />
         <Route path="exercicios" element={<Navigate to="/" replace />} />
         <Route path="simulados" element={<SimuladosPage />} />

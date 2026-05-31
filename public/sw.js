@@ -1,5 +1,5 @@
-const CACHE_NAME = 'enem-planner-cache-v4';
-const PRECACHE_URLS = ['./', './index.html', './manifest.webmanifest', './imagemenem.png'];
+const CACHE_NAME = 'enem-focus-cache-v5';
+const PRECACHE_URLS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
