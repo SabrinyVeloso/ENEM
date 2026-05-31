@@ -216,13 +216,131 @@ export const curriculum = {
 };
 
 export const videoChannels = [
-  { name: 'Ferretto Matemática', area: 'Matemática', note: 'aulas diretas e resolução guiada', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Ferretto+Matem%C3%A1tica' },
-  { name: 'Professor Noslen', area: 'Linguagens', note: 'gramática, leitura e interpretação', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Professor+Noslen' },
-  { name: 'Biologia Total', area: 'Natureza', note: 'explicações visuais e objetivas', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Biologia+Total' },
-  { name: 'Química em Ação', area: 'Natureza', note: 'química do básico ao avançado', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Qu%C3%ADmica+em+A%C3%A7%C3%A3o' },
-  { name: 'Parabólica', area: 'Humanas', note: 'história, geografia e atualidades', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Parab%C3%B3lica+Hist%C3%B3ria' },
-  { name: 'Se Liga Nessa História', area: 'Humanas', note: 'linha do tempo e revisão prática', actionLabel: 'Abrir Canal', url: 'https://www.youtube.com/results?search_query=Se+Liga+Nessa+Hist%C3%B3ria' }
+  {
+    subject: 'Matemática',
+    name: 'Ferretto Matemática',
+    note: 'resolução objetiva e base forte para as questões mais cobradas.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Ferretto+Matem%C3%A1tica',
+    photo: createAvatarDataUri({ initials: 'MA', from: '#2f8dff', to: '#79c6ff', accent: '#ffffff' })
+  },
+  {
+    subject: 'Português',
+    name: 'Professor Noslen',
+    note: 'leitura, gramática e interpretação com explicação direta.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Professor+Noslen',
+    photo: createAvatarDataUri({ initials: 'PT', from: '#3b5bdb', to: '#2e3154', accent: '#c7d2fe' })
+  },
+  {
+    subject: 'Artes',
+    name: 'Arte na Escola',
+    note: 'contexto artístico, leitura de obras e repertório visual.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Arte+na+Escola',
+    photo: createAvatarDataUri({ initials: 'AR', from: '#ec4899', to: '#f97316', accent: '#fde68a' })
+  },
+  {
+    subject: 'História',
+    name: 'Parabólica História',
+    note: 'linha do tempo, atualidades e leitura crítica dos fatos.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Parab%C3%B3lica+Hist%C3%B3ria',
+    photo: createAvatarDataUri({ initials: 'HI', from: '#7c3aed', to: '#a855f7', accent: '#e9d5ff' })
+  },
+  {
+    subject: 'Geografia',
+    name: 'GeoProfessor',
+    note: 'mapas, território, clima e temas do mundo contemporâneo.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=geografia+enem+canal',
+    photo: createAvatarDataUri({ initials: 'GE', from: '#0ea5e9', to: '#2563eb', accent: '#bae6fd' })
+  },
+  {
+    subject: 'Filosofia',
+    name: 'Filosofia com Lucas',
+    note: 'pensamento crítico e autores centrais para a prova.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=filosofia+enem+canal',
+    photo: createAvatarDataUri({ initials: 'FI', from: '#16a34a', to: '#14b8a6', accent: '#d1fae5' })
+  },
+  {
+    subject: 'Sociologia',
+    name: 'Sociologia em Foco',
+    note: 'sociedade, cidadania e temas atuais explicados com clareza.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=sociologia+enem+canal',
+    photo: createAvatarDataUri({ initials: 'SO', from: '#f43f5e', to: '#fb7185', accent: '#ffe4e6' })
+  },
+  {
+    subject: 'Biologia',
+    name: 'Biologia Total',
+    note: 'explicações visuais para ecologia, genética e fisiologia.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Biologia+Total',
+    photo: createAvatarDataUri({ initials: 'BI', from: '#22c55e', to: '#15803d', accent: '#dcfce7' })
+  },
+  {
+    subject: 'Química',
+    name: 'Química em Ação',
+    note: 'conteúdo direto, exercícios e revisão dos pontos-chave.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Qu%C3%ADmica+em+A%C3%A7%C3%A3o',
+    photo: createAvatarDataUri({ initials: 'QU', from: '#f59e0b', to: '#f97316', accent: '#ffedd5' })
+  },
+  {
+    subject: 'Física',
+    name: 'Física 2.0',
+    note: 'conceitos essenciais, resolução guiada e foco em questões.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=F%C3%ADsica+2.0+ENEM',
+    photo: createAvatarDataUri({ initials: 'FS', from: '#2563eb', to: '#0f172a', accent: '#bfdbfe' })
+  },
+  {
+    subject: 'Redação',
+    name: 'Professora Pamba',
+    note: 'estrutura, repertório e prática para montar um texto forte.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=Professora+Pamba+reda%C3%A7%C3%A3o',
+    photo: createAvatarDataUri({ initials: 'RE', from: '#8b5cf6', to: '#ec4899', accent: '#f5d0fe' })
+  },
+  {
+    subject: 'Dicas ENEM',
+    name: 'Débora Aladim',
+    note: 'orientação de estudo, atualidades e dicas para a prova.',
+    actionLabel: 'Abrir Canal',
+    url: 'https://www.youtube.com/results?search_query=D%C3%A9bora+Aladim+ENEM',
+    photo: createAvatarDataUri({ initials: 'EN', from: '#fb7185', to: '#f59e0b', accent: '#fff1f2' })
+  }
 ];
+
+function createAvatarDataUri({ initials, from, to, accent }) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-hidden="true">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${from}" />
+          <stop offset="100%" stop-color="${to}" />
+        </linearGradient>
+        <linearGradient id="ring" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.9)" />
+          <stop offset="100%" stop-color="${accent}" />
+        </linearGradient>
+      </defs>
+      <rect width="256" height="256" rx="56" fill="url(#bg)" />
+      <circle cx="72" cy="76" r="42" fill="rgba(255,255,255,0.16)" />
+      <circle cx="198" cy="54" r="34" fill="rgba(255,255,255,0.14)" />
+      <circle cx="196" cy="198" r="46" fill="rgba(255,255,255,0.08)" />
+      <path d="M58 192c18-32 43-48 70-48s52 16 70 48" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="10" stroke-linecap="round" />
+      <circle cx="128" cy="104" r="44" fill="rgba(255,255,255,0.2)" />
+      <path d="M96 194c7-22 23-34 32-34s25 12 32 34" fill="rgba(255,255,255,0.22)" />
+      <text x="128" y="140" text-anchor="middle" font-family="Manrope, Arial, sans-serif" font-size="64" font-weight="900" fill="white" letter-spacing="-3">${initials}</text>
+      <rect x="28" y="28" width="200" height="200" rx="44" fill="none" stroke="url(#ring)" stroke-width="4" opacity="0.8" />
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
 
 export const essayTopics = [
   '2025 - Perspectivas acerca do envelhecimento na sociedade brasileira',

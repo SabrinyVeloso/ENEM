@@ -32,9 +32,19 @@ const priorityFilters = [
   ...Object.entries(priorityMeta).map(([id, meta]) => ({ id, label: meta.label }))
 ];
 
+const statusLabels = {
+  done: 'Estudado',
+  lost: 'Perdido',
+  pending: 'Pendente'
+};
+
 function getItemType(item) {
   if (item.subject === 'essay') return 'redacao';
   return 'conteudo';
+}
+
+function normalizeStatus(value) {
+  return value === 'done' || value === 'lost' || value === 'pending' ? value : 'pending';
 }
 
 function FilterGroup({ label, value, onChange, options }) {
@@ -54,6 +64,8 @@ function FilterGroup({ label, value, onChange, options }) {
 }
 
 function ContentCard({ item, status, onStatus }) {
+  const blocks = Array.isArray(item.blocks) ? item.blocks : [];
+
   return (
     <GlassCard className={`p-4 sm:p-5 ${status === 'done' ? 'bg-emerald-500/10' : status === 'lost' ? 'bg-rose-500/10' : 'bg-white/5'}`}>
       <div className="flex items-start justify-between gap-3">
@@ -68,12 +80,12 @@ function ContentCard({ item, status, onStatus }) {
             <StatusBadge status="pending">Importância {item.importance}/5</StatusBadge>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {(item.blocks || []).map((block) => (
+            {blocks.map((block) => (
               <StatusBadge key={block} status={block === 'Exercícios' ? 'simulado' : block === 'Revisão' ? 'review' : 'pending'}>{block}</StatusBadge>
             ))}
           </div>
         </div>
-        <StatusBadge status={status}>{status}</StatusBadge>
+        <StatusBadge status={status}>{statusLabels[status] || 'Pendente'}</StatusBadge>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -96,10 +108,12 @@ export default function ContentsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [query, setQuery] = useState('');
+  const safeItems = Array.isArray(contentItems) ? contentItems : [];
+  const safeStatuses = state.contentStatuses || {};
 
   const filtered = useMemo(() => {
-    return contentItems.filter((item) => {
-      const status = state.contentStatuses[item.id] || 'pending';
+    return safeItems.filter((item) => {
+      const status = normalizeStatus(safeStatuses[item.id]);
       const matchesStatus = statusFilter === 'all' || statusFilter === status;
       const matchesSubject = subjectFilter === 'all' || subjectFilter === item.subject;
       const matchesType = typeFilter === 'all' || typeFilter === getItemType(item);
@@ -107,7 +121,12 @@ export default function ContentsPage() {
       const matchesQuery = !query || `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase());
       return matchesStatus && matchesSubject && matchesType && matchesPriority && matchesQuery;
     });
-  }, [contentItems, priorityFilter, query, state.contentStatuses, statusFilter, subjectFilter, typeFilter]);
+  }, [priorityFilter, query, safeItems, safeStatuses, statusFilter, subjectFilter, typeFilter]);
+
+  const emptyTitle = statusFilter === 'lost' ? 'Nenhum conteúdo perdido encontrado' : 'Nenhum conteúdo encontrado';
+  const emptySubtitle = statusFilter === 'lost'
+    ? 'Marque conteúdos como perdidos para vê-los aqui. Se já havia itens perdidos, revise os filtros aplicados.'
+    : 'Tente outro filtro ou pesquise por parte do tema.';
 
   return (
     <div className="grid gap-4 pb-6">
@@ -143,9 +162,9 @@ export default function ContentsPage() {
 
       <section className="grid gap-4">
         {filtered.length === 0 ? (
-          <EmptyState title="Nenhum conteúdo encontrado" subtitle="Tente outro filtro ou pesquise por parte do tema." />
+          <EmptyState title={emptyTitle} subtitle={emptySubtitle} action={statusFilter !== 'all' ? <button type="button" className="app-button-secondary" onClick={() => setStatusFilter('all')}>Limpar filtro de status</button> : null} />
         ) : (
-          filtered.map((item) => <ContentCard key={item.id} item={item} status={state.contentStatuses[item.id] || 'pending'} onStatus={actions.setContentStatus} />)
+          filtered.map((item) => <ContentCard key={item.id} item={item} status={normalizeStatus(safeStatuses[item.id])} onStatus={actions.setContentStatus} />)
         )}
       </section>
     </div>

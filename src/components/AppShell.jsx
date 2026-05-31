@@ -47,6 +47,21 @@ export function AppShell() {
     };
   }, []);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = state.theme;
+    document.documentElement.style.colorScheme = state.theme;
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', themePalette.bg);
+    }
+
+    const appleStatusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (appleStatusBarMeta) {
+      appleStatusBarMeta.setAttribute('content', state.theme === 'dark' ? 'black-translucent' : 'default');
+    }
+  }, [state.theme, themePalette.bg]);
+
   async function handleInstallApp() {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -60,7 +75,7 @@ export function AppShell() {
 
   const mobileNavClassName = state.focusMode
     ? 'hidden'
-    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 gap-1 rounded-[24px] border border-[var(--border)] bg-[rgba(10,14,28,0.92)] px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
+    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 gap-1 rounded-[24px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ '--primary': themePalette.primary, '--accent': themePalette.accent, '--border': themePalette.border, '--muted': themePalette.muted, '--glow': themePalette.glow }}>
@@ -122,7 +137,14 @@ export function AppShell() {
           </main>
         </div>
 
-        <nav className={mobileNavClassName}>
+        <nav
+          className={mobileNavClassName}
+          style={{
+            backgroundColor: state.theme === 'dark' ? 'rgba(10, 14, 28, 0.92)' : 'rgba(247, 251, 255, 0.94)',
+            borderColor: themePalette.border,
+            boxShadow: state.theme === 'dark' ? '0 18px 70px rgba(0, 0, 0, 0.45)' : '0 18px 60px rgba(10, 46, 92, 0.16)'
+          }}
+        >
           {navItems.map((item) => (
             <NavLink
               key={item.to}
