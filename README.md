@@ -61,8 +61,11 @@ O projeto está pronto para **GitHub Pages** ou **Vercel**.
 ### GitHub Pages
 
 1. Faça o push do repositório para o GitHub.
-2. Configure o Pages para publicar a branch principal.
-3. Como o app usa `HashRouter` e `base: './'`, os caminhos ficam compatíveis com deploy estático.
+2. Vá em **Settings > Pages** e em **Build and deployment** selecione **Source: GitHub Actions**.
+3. O workflow `.github/workflows/deploy.yml` fará o build com `GITHUB_PAGES=true` e publicará a pasta `dist`.
+4. A URL final será `https://SEU_USUARIO.github.io/ENEM/`.
+
+> Importante: não use **Deploy from a branch** (ex.: `main`), pois isso publica o código-fonte (`src/main.jsx`) em vez da build do Vite e o site não abre corretamente.
 
 ### Vercel
 
