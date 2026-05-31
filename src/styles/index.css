@@ -19,15 +19,16 @@
 
   html[data-theme='light'] {
     color-scheme: light;
-    --bg: #eaf6ff;
-    --surface: rgba(191, 228, 255, 0.76);
-    --surface-alt: rgba(247, 251, 255, 0.84);
+    /* Softer, less-white palette for light theme */
+    --bg: #f3f6f9; /* soft off-white */
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-alt: rgba(250, 253, 255, 0.96);
     --primary: #2f8dff;
     --accent: #79c6ff;
-    --text: #0a2e5c;
-    --muted: #2a4b66;
-    --border: rgba(42, 75, 102, 0.12);
-    --glow: rgba(47, 141, 255, 0.22);
+    --text: #0f2b45; /* slightly darker for contrast */
+    --muted: #4a6b84;
+    --border: rgba(15, 23, 36, 0.06);
+    --glow: rgba(47, 141, 255, 0.12);
   }
 
   html[data-theme='dark'] select,

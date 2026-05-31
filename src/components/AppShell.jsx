@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
 import { BookIcon, ChartIcon, HomeIcon, MoonIcon, PenIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
 import { StatusBadge } from './Ui';
+import Onboarding from './Onboarding';
 
 const navItems = [
   { to: '/', label: 'Home', icon: HomeIcon },
@@ -136,6 +137,9 @@ export function AppShell() {
             <Outlet />
           </main>
         </div>
+
+        {/* Show onboarding modal if user hasn't completed initial setup */}
+        {!state.settings?.onboardCompleted ? <Onboarding /> : null}
 
         <nav
           className={mobileNavClassName}
