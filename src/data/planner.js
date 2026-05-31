@@ -25,6 +25,114 @@ export const themePalettes = {
   }
 };
 
+export const accentColors = {
+  blue: {
+    50: '#F0F8FF',
+    100: '#DCEEFF',
+    200: '#BFE1FF',
+    300: '#8FD4FF',
+    400: '#5FBFFF',
+    500: '#2F8DFF',
+    600: '#1E6FE6',
+    700: '#0F4FB3',
+    800: '#08307A',
+    900: '#041A3D',
+    primary: '#2F8DFF',
+    primaryStrong: '#08307A',
+    accent: '#79C6FF',
+    accentLight: '#DFF4FF',
+    hover: '#1E6FE6',
+    glow: 'rgba(47,141,255,0.22)',
+    border: 'rgba(47,141,255,0.12)',
+    onPrimary: '#FFFFFF',
+    shadow: '0 10px 30px rgba(47,141,255,0.12)'
+  },
+  purple: {
+    50: '#FBF5FF',
+    100: '#F3E9FF',
+    200: '#E6D0FF',
+    300: '#D0B3FF',
+    400: '#B58EFF',
+    500: '#9B5CF6',
+    600: '#7A3DD9',
+    700: '#5B2A9E',
+    800: '#39186A',
+    900: '#1B0B36',
+    primary: '#9B5CF6',
+    primaryStrong: '#5B2A9E',
+    accent: '#C9A6FF',
+    accentLight: '#F3E8FF',
+    hover: '#7A3DD9',
+    glow: 'rgba(155,92,246,0.18)',
+    border: 'rgba(155,92,246,0.12)',
+    onPrimary: '#FFFFFF',
+    shadow: '0 10px 30px rgba(155,92,246,0.12)'
+  },
+  pink: {
+    50: '#FFF5FA',
+    100: '#FFEAF4',
+    200: '#FFD7EB',
+    300: '#FFBFE0',
+    400: '#FF9CCF',
+    500: '#FF66B2',
+    600: '#E0438E',
+    700: '#AA2A62',
+    800: '#6B153A',
+    900: '#34071C',
+    primary: '#FF66B2',
+    primaryStrong: '#AA2A62',
+    accent: '#FF9CCF',
+    accentLight: '#FFEAF4',
+    hover: '#E0438E',
+    glow: 'rgba(255,102,178,0.18)',
+    border: 'rgba(255,102,178,0.12)',
+    onPrimary: '#0A0A0A',
+    shadow: '0 10px 30px rgba(255,102,178,0.10)'
+  },
+  green: {
+    50: '#F2FFF7',
+    100: '#E6FFEF',
+    200: '#CFFFE0',
+    300: '#9FFFC2',
+    400: '#6FEFA5',
+    500: '#34D399',
+    600: '#1FA273',
+    700: '#0D6B4F',
+    800: '#054032',
+    900: '#02201A',
+    primary: '#34D399',
+    primaryStrong: '#0D6B4F',
+    accent: '#86EFAC',
+    accentLight: '#E6FFF3',
+    hover: '#1FA273',
+    glow: 'rgba(52,211,153,0.16)',
+    border: 'rgba(52,211,153,0.12)',
+    onPrimary: '#06321E',
+    shadow: '0 10px 30px rgba(52,211,153,0.10)'
+  },
+  gray: {
+    50: '#FBFCFD',
+    100: '#F3F6F9',
+    200: '#E6EAF0',
+    300: '#CBD5E1',
+    400: '#A8B3C2',
+    500: '#94A3B8',
+    600: '#6E7B8A',
+    700: '#46505A',
+    800: '#263043',
+    900: '#13181C',
+    primary: '#94A3B8',
+    primaryStrong: '#263043',
+    accent: '#CBD5E1',
+    accentLight: '#F3F6F9',
+    hover: '#6E7B8A',
+    glow: 'rgba(148,163,184,0.12)',
+    border: 'rgba(148,163,184,0.12)',
+    onPrimary: '#0A0F16',
+    shadow: '0 10px 30px rgba(16,24,40,0.06)'
+  }
+};
+
 export const scheduleStart = '2026-07-05';
 export const enemDate = '2026-11-08';
 
@@ -461,7 +569,9 @@ export const settingsDefaults = {
   studyDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   studyHoursPerDay: 90,
   targetScore: '700+',
-  level: 'Intermediário'
+  level: 'Intermediário',
+  themeMode: 'dark',
+  accentColor: 'blue'
 };
 
 const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' });

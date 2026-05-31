@@ -95,13 +95,25 @@ export default function SettingsPage() {
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quando você quer começar a estudar?</p>
             <input className="input-shell w-full" type="date" value={studyStartDate} onChange={(event) => setStudyStartDate(event.target.value)} />
 
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">🎨 Aparência</p>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={() => actions.setTheme('light')} className="app-button-secondary">Tema claro</button>
-              <button type="button" onClick={() => actions.setTheme('dark')} className="app-button-secondary">Tema escuro</button>
-              <StatusBadge status={state.theme === 'dark' ? 'simulado' : 'done'}>{state.theme}</StatusBadge>
+              <button type="button" onClick={() => actions.setMode('light')} className={`app-button-secondary ${state.settings.themeMode === 'light' ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}>☀️ Claro</button>
+              <button type="button" onClick={() => actions.setMode('dark')} className={`app-button-secondary ${state.settings.themeMode === 'dark' ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}>🌙 Escuro</button>
+              <StatusBadge status={state.settings.themeMode === 'dark' ? 'simulado' : 'done'}>{state.settings.themeMode}</StatusBadge>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 mt-3">
+              <div className="text-[12px] font-medium text-[var(--muted)]">Cor de destaque</div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => actions.setAccent('blue')} className={`w-8 h-8 rounded-full ring-2 ${state.settings.accentColor === 'blue' ? 'ring-offset-2 ring-white ring-primary' : ''}`} style={{ background: 'linear-gradient(135deg,#2F8DFF,#79C6FF)' }} />
+                <button type="button" onClick={() => actions.setAccent('purple')} className={`w-8 h-8 rounded-full ring-2 ${state.settings.accentColor === 'purple' ? 'ring-offset-2 ring-white ring-primary' : ''}`} style={{ background: 'linear-gradient(135deg,#9B5CF6,#C9A6FF)' }} />
+                <button type="button" onClick={() => actions.setAccent('pink')} className={`w-8 h-8 rounded-full ring-2 ${state.settings.accentColor === 'pink' ? 'ring-offset-2 ring-white ring-primary' : ''}`} style={{ background: 'linear-gradient(135deg,#FF66B2,#FF9CCF)' }} />
+                <button type="button" onClick={() => actions.setAccent('green')} className={`w-8 h-8 rounded-full ring-2 ${state.settings.accentColor === 'green' ? 'ring-offset-2 ring-white ring-primary' : ''}`} style={{ background: 'linear-gradient(135deg,#34D399,#86EFAC)' }} />
+                <button type="button" onClick={() => actions.setAccent('gray')} className={`w-8 h-8 rounded-full ring-2 ${state.settings.accentColor === 'gray' ? 'ring-offset-2 ring-white ring-primary' : ''}`} style={{ background: 'linear-gradient(135deg,#94A3B8,#CBD5E1)' }} />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-4">
               <button type="button" onClick={saveSettings} className="app-button-primary">Salvar</button>
               <button type="button" onClick={actions.resetAll} className="app-button-secondary">Resetar dados</button>
             </div>

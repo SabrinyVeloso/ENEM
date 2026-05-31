@@ -13,6 +13,7 @@ import {
   settingsDefaults,
   subjectMeta,
   themePalettes,
+  accentColors,
   addDays,
   fromISODate,
   toISODate,
@@ -401,24 +402,67 @@ function buildDashboardSummary(state, scheduleData) {
 
 function persistState(nextState) {
   saveJSON(STORAGE_KEY, nextState);
-  saveJSON(THEME_KEY, nextState.theme);
+  saveJSON(THEME_KEY, nextState.settings?.themeMode || nextState.theme);
 }
 
 export function PlannerProvider({ children }) {
   const [state, setState] = useState(() => mergeState(createDefaultState(), readJSON(STORAGE_KEY, null)));
 
   useEffect(() => {
-    document.documentElement.dataset.theme = state.theme;
+    // Apply appearance from settings (mode + accent)
+    const mode = state.settings?.themeMode || state.theme || 'dark';
+    const accent = state.settings?.accentColor || 'blue';
+    document.documentElement.dataset.theme = mode;
+
+    const base = themePalettes[mode] || themePalettes.dark;
+    const accentDef = accentColors[accent] || accentColors.blue;
+    const merged = { ...base, ...accentDef };
+
+    // Apply CSS variables globally
+    try {
+      const root = document.documentElement;
+      root.style.setProperty('--primary', merged.primary);
+      root.style.setProperty('--primary-50', merged[50] || merged.primary);
+      root.style.setProperty('--primary-100', merged[100] || merged.primary);
+      root.style.setProperty('--primary-200', merged[200] || merged.primary);
+      root.style.setProperty('--primary-300', merged[300] || merged.primary);
+      root.style.setProperty('--primary-400', merged[400] || merged.primary);
+      root.style.setProperty('--primary-600', merged[600] || merged.primary);
+      root.style.setProperty('--primary-700', merged[700] || merged.primaryStrong || merged.primary);
+      root.style.setProperty('--primary-800', merged[800] || merged.primaryStrong || merged.primary);
+      root.style.setProperty('--primary-900', merged[900] || merged.primaryStrong || merged.primary);
+      root.style.setProperty('--primary-strong', merged.primaryStrong || merged.primary);
+      root.style.setProperty('--accent', merged.accent || merged.primary);
+      root.style.setProperty('--accent-light', merged.accentLight || merged.accent || merged.primary);
+      root.style.setProperty('--accent-hover', merged.hover || merged.primary);
+      root.style.setProperty('--on-primary', merged.onPrimary || (mode === 'dark' ? '#FFFFFF' : '#0A0A0A'));
+      root.style.setProperty('--muted', merged.muted || base.muted || '#7b8794');
+      root.style.setProperty('--border', merged.border || base.border || 'rgba(0,0,0,0.08)');
+      root.style.setProperty('--glow', merged.glow || base.glow || 'transparent');
+      root.style.setProperty('--shadow-color', merged.shadow || '0 10px 30px rgba(0,0,0,0.08)');
+    } catch (e) {
+      // ignore in non-DOM environments
+    }
+
     persistState(state);
   }, [state]);
 
   const actions = useMemo(() => {
     return {
       setTheme(theme) {
-        setState((current) => ({ ...current, theme }));
+        setState((current) => ({ ...current, theme, settings: { ...current.settings, themeMode: theme } }));
       },
       toggleTheme() {
-        setState((current) => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
+        setState((current) => {
+          const next = current.theme === 'dark' ? 'light' : 'dark';
+          return { ...current, theme: next, settings: { ...current.settings, themeMode: next } };
+        });
+      },
+      setMode(mode) {
+        setState((current) => ({ ...current, settings: { ...current.settings, themeMode: mode } }));
+      },
+      setAccent(accent) {
+        setState((current) => ({ ...current, settings: { ...current.settings, accentColor: accent } }));
       },
       setContentStatus(contentId, status) {
         const nextStatus = normalizeContentStatus(status);
@@ -528,8 +572,11 @@ export function PlannerProvider({ children }) {
           const merged = { ...current.settings, ...settings };
           try {
             const provided = merged.studyStartDate;
-            if (!provided || fromISODate(provided) > new Date()) {
+            if (!provided) {
               merged.studyStartDate = toISODate(new Date());
+            } else {
+              // normalize to ISO (preserve future dates)
+              merged.studyStartDate = toISODate(fromISODate(provided));
             }
           } catch {
             merged.studyStartDate = toISODate(new Date());
@@ -545,8 +592,10 @@ export function PlannerProvider({ children }) {
           const merged = { ...current.settings, ...settings };
           try {
             const provided = merged.studyStartDate;
-            if (!provided || fromISODate(provided) > new Date()) {
+            if (!provided) {
               merged.studyStartDate = toISODate(new Date());
+            } else {
+              merged.studyStartDate = toISODate(fromISODate(provided));
             }
           } catch {
             merged.studyStartDate = toISODate(new Date());
@@ -584,7 +633,16 @@ export function PlannerProvider({ children }) {
       essayTopics,
       repertoires,
       connectors,
-      themePalette: themePalettes[state.theme],
+      // derive theme palette combining mode and accent
+      themePalette: (() => {
+        const mode = state.settings?.themeMode || state.theme || 'dark';
+        const accent = state.settings?.accentColor || 'blue';
+        const base = themePalettes[mode] || themePalettes.dark;
+        const accentDef = accentColors[accent] || accentColors.blue;
+        return { ...base, ...accentDef };
+      })(),
+      themePalettes,
+      accentColors,
       subjectMeta,
       schedule: adaptiveSchedule,
       scheduleStart,

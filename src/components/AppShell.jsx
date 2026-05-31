@@ -49,8 +49,9 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = state.theme;
-    document.documentElement.style.colorScheme = state.theme;
+    const mode = state.settings?.themeMode || state.theme || 'dark';
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
 
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
@@ -59,7 +60,7 @@ export function AppShell() {
 
     const appleStatusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
     if (appleStatusBarMeta) {
-      appleStatusBarMeta.setAttribute('content', state.theme === 'dark' ? 'black-translucent' : 'default');
+      appleStatusBarMeta.setAttribute('content', mode === 'dark' ? 'black-translucent' : 'default');
     }
   }, [state.theme, themePalette.bg]);
 
@@ -90,7 +91,7 @@ export function AppShell() {
           <Brand />
 
           <button type="button" onClick={actions.toggleTheme} className="app-button-secondary mt-6 w-full justify-center gap-2">
-            {state.theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+            {(state.settings?.themeMode || state.theme) === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
             <span>Tema</span>
           </button>
 
@@ -144,9 +145,9 @@ export function AppShell() {
           role="navigation"
           aria-label="Menu móvel"
           style={{
-            backgroundColor: state.theme === 'dark' ? 'rgba(10, 14, 28, 0.92)' : 'rgba(247, 251, 255, 0.94)',
+            backgroundColor: (state.settings?.themeMode || state.theme) === 'dark' ? 'rgba(10, 14, 28, 0.92)' : 'rgba(247, 251, 255, 0.94)',
             borderColor: themePalette.border,
-            boxShadow: state.theme === 'dark' ? '0 18px 70px rgba(0, 0, 0, 0.45)' : '0 18px 60px rgba(10, 46, 92, 0.16)'
+            boxShadow: (state.settings?.themeMode || state.theme) === 'dark' ? '0 18px 70px rgba(0, 0, 0, 0.45)' : '0 18px 60px rgba(10, 46, 92, 0.16)'
           }}
         >
           {navItems.map((item) => (
