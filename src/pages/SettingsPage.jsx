@@ -48,6 +48,14 @@ export default function SettingsPage() {
     if (actions.generateSchedule) actions.generateSchedule(nextSettings);
   }
 
+  const [saveSuccessVisible, setSaveSuccessVisible] = React.useState(false);
+
+  function handleSave() {
+    saveSettings();
+    setSaveSuccessVisible(true);
+    setTimeout(() => setSaveSuccessVisible(false), 3000);
+  }
+
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
@@ -114,9 +122,14 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 mt-4">
-              <button type="button" onClick={saveSettings} className="app-button-primary">Salvar</button>
+              <button type="button" onClick={handleSave} className="app-button-primary">Salvar</button>
               <button type="button" onClick={actions.resetAll} className="app-button-secondary">Resetar dados</button>
             </div>
+            {saveSuccessVisible ? (
+              <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-green-600/10 px-3 py-2 text-sm font-semibold text-green-700 shadow-sm animate-fade-in">
+                ✅ Suas alterações foram salvas com sucesso.
+              </div>
+            ) : null}
           </div>
         </GlassCard>
       </section>

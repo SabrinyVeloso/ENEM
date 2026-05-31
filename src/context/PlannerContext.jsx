@@ -89,6 +89,24 @@ function getTodayISO() {
   return toISODate(new Date());
 }
 
+function getStudyStartTiming(settings) {
+  try {
+    const startISO = settings?.studyStartDate || scheduleStart;
+    const start = fromISODate(startISO);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((start - today) / 86400000);
+    return {
+      startISO: toISODate(start),
+      isBeforeStart: diff > 0,
+      daysUntilStart: Math.max(0, diff)
+    };
+  } catch (e) {
+    return { startISO: scheduleStart, isBeforeStart: false, daysUntilStart: 0 };
+  }
+}
+
 function getNextStudyDate(settings, fromDate = new Date()) {
   const scheduleData = buildAdaptiveSchedule(settings);
   const today = toISODate(fromDate);
@@ -581,9 +599,12 @@ export function PlannerProvider({ children }) {
           } catch {
             merged.studyStartDate = toISODate(new Date());
           }
+          // Recalculate schedule and persist generated schedule
+          const scheduleData = buildAdaptiveSchedule(merged);
           return {
             ...current,
-            settings: merged
+            settings: merged,
+            generatedSchedule: scheduleData
           };
         });
       },
@@ -600,9 +621,11 @@ export function PlannerProvider({ children }) {
           } catch {
             merged.studyStartDate = toISODate(new Date());
           }
+          const scheduleData = buildAdaptiveSchedule(merged);
           return {
             ...current,
-            settings: merged
+            settings: merged,
+            generatedSchedule: scheduleData
           };
         });
       },
@@ -613,7 +636,78 @@ export function PlannerProvider({ children }) {
   }, []);
 
   const derived = useMemo(() => {
-    const adaptiveSchedule = buildAdaptiveSchedule(state.settings);
+    const adaptiveSchedule = state.generatedSchedule || buildAdaptiveSchedule(state.settings);
+    const timing = getStudyStartTiming(state.settings);
+
+    if (timing.isBeforeStart) {
+      const startLabel = fromISODate(timing.startISO).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const dashboardBefore = {
+        isBeforeStudyStart: true,
+        studyStartISO: timing.startISO,
+        studyStartLabel: startLabel,
+        daysUntilStudyStart: timing.daysUntilStart,
+        // other dashboard metrics zeroed until start
+        completion: 0,
+        completed: 0,
+        lost: 0,
+        pending: 0,
+        streak: 0,
+        currentWeek: null,
+        currentDay: null,
+        currentWeekProgress: 0,
+        monthProgress: 0,
+        previousWeekProgress: 0,
+        progressDelta: 0,
+        weekGoal: state.settings.weeklyGoal,
+        daysUntilEnem: getDaysUntilEnem(),
+        total: adaptiveSchedule.items.length,
+        hoursAccumulated: 0,
+        subjectStats: [],
+        heatmap: [],
+        achievements: [],
+        focusMinutes: 0,
+        reviewItems: [],
+        todayStudyItems: [],
+        overdueItems: [],
+        reminders: [],
+        nextReview: { date: null, label: 'Sem revisão agendada', title: 'Sem revisão' },
+        motivations: [],
+        recoveryItems: [],
+        dueRecoveryItems: [],
+        recoveryCount: 0,
+        dueRecoveryCount: 0,
+        essayCount: state.essays.length,
+        questionCount: state.exerciseHistory.length,
+        simuladoCount: state.simuladoHistory.length
+      };
+
+      return {
+        dashboard: dashboardBefore,
+        currentWeek: null,
+        currentDay: null,
+        subjectStats: [],
+        heatmap: [],
+        contentItems: adaptiveSchedule.items,
+        contentBySubject: {
+          math: getContentBySubject(adaptiveSchedule, 'math'),
+          language: getContentBySubject(adaptiveSchedule, 'language'),
+          humanas: getContentBySubject(adaptiveSchedule, 'humanas'),
+          nature: getContentBySubject(adaptiveSchedule, 'nature'),
+          essay: getContentBySubject(adaptiveSchedule, 'essay')
+        },
+        videoChannels,
+        baseQuestions,
+        essayTopics,
+        repertoires,
+        connectors,
+        themePalette: themePalettes[state.theme],
+        subjectMeta,
+        schedule: adaptiveSchedule,
+        scheduleStart,
+        enemDate
+      };
+    }
+
     return {
       dashboard: buildDashboard(state, adaptiveSchedule),
       currentWeek: getCurrentWeek(adaptiveSchedule),
