@@ -37,31 +37,7 @@ function StudyItemCard({ item, onStatus }) {
   );
 }
 
-function OverdueCard({ item, onStatus }) {
-  return (
-    <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{item.subjectLabel}</p>
-          <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{item.title}</strong>
-          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <StatusBadge status="perdido">Atrasado</StatusBadge>
-            {item.isRescheduled ? <StatusBadge status="review">Reagendado</StatusBadge> : null}
-            <StatusBadge status={item.priority}>{item.priorityLabel}</StatusBadge>
-          </div>
-        </div>
-        <StatusBadge status="perdido">{item.dueDate}</StatusBadge>
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <button type="button" onClick={() => onStatus(item.id, 'done')} className="app-button-secondary w-full text-xs">Revisto</button>
-        <button type="button" onClick={() => onStatus(item.id, 'pending')} className="app-button-secondary w-full text-xs">Pendente</button>
-        <button type="button" onClick={() => onStatus(item.id, 'perdido')} className="app-button-secondary w-full text-xs">Manter</button>
-      </div>
-    </div>
-  );
-}
+// OverdueCard removed (unused)
 
 function ReminderCard({ item }) {
   return (
@@ -79,7 +55,7 @@ function ReminderCard({ item }) {
 
 export default function HomePage() {
   const { dashboard, actions, state } = usePlanner();
-  const [showMore, setShowMore] = useState(false);
+  const [showMore] = useState(false);
   const displayName = state.settings.profileName?.trim() || 'Seu nome';
 
   function getGreeting() {
@@ -100,8 +76,7 @@ export default function HomePage() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--muted)]">{getGreeting()}, {displayName}</p>
-            <h1 className="max-w-xl text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">Seu assistente de estudos do ENEM, sem distração.</h1>
-            <p className="max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base">Avisos inteligentes, estudos de hoje, revisão e progresso em um painel mobile-first.</p>
+            <h1 className="max-w-xl text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">Seu assistente de estudos do ENEM</h1>
             <div className="flex flex-wrap gap-2">
               <StatusBadge status="simulado">🔥 {dashboard.streak} dias seguidos</StatusBadge>
               <StatusBadge status="done">{dashboard.completion}% concluído</StatusBadge>
@@ -119,7 +94,7 @@ export default function HomePage() {
 
       <section className="grid gap-4 xl:grid-cols-2">
         <GlassCard className="p-4 sm:p-5">
-          <SectionHeader eyebrow="Avisos importantes" title="Painel de lembretes" subtitle="Só aparece o que realmente importa para o dia." />
+          <SectionHeader eyebrow="Avisos importantes" title="Painel de lembretes" />
           <div className="mt-4 grid gap-3">
             {reminders.length === 0 ? (
               <EmptyState title="Tudo sob controle" subtitle="Hoje não há alertas urgentes. Continue seguindo o plano." />
@@ -128,7 +103,7 @@ export default function HomePage() {
         </GlassCard>
 
         <GlassCard className="p-4 sm:p-5">
-          <SectionHeader eyebrow="Estudos de hoje" title="Conteúdos programados" subtitle="O que está no cronograma de hoje, com status e prioridade." />
+          <SectionHeader eyebrow="Estudos de hoje" title="Conteúdos programados" />
           <div className="mt-4 grid gap-3">
             {todayItems.length === 0 ? (
               <EmptyState title="Sem estudos para hoje" subtitle="Seu cronograma não tem novos itens programados para hoje." />
@@ -139,7 +114,7 @@ export default function HomePage() {
       </section>
 
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Progresso" title="Painel de evolução" subtitle="Leitura rápida da sua rotina, com indicadores simples e visuais." />
+        <SectionHeader eyebrow="Progresso" title="Painel de evolução" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <StatTile label="Concluído" value={`${dashboard.completion}%`} caption={`${dashboard.completed}/${dashboard.total}`} tone="brand" />
           <StatTile label="Estudados" value={dashboard.completed} caption="conteúdos finalizados" tone="good" />

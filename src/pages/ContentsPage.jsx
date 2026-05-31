@@ -19,17 +19,9 @@ const subjectFilters = [
   { id: 'essay', label: 'Redação' }
 ];
 
-const typeFilters = [
-  { id: 'all', label: 'Todos os tipos' },
-  { id: 'conteudo', label: 'Conteúdo' },
-  { id: 'exercicio', label: 'Exercício' },
-  { id: 'simulado', label: 'Simulado' },
-  { id: 'redacao', label: 'Redação' }
-];
-
 const priorityFilters = [
   { id: 'all', label: 'Todas as prioridades' },
-  ...Object.entries(priorityMeta).map(([id, meta]) => ({ id, label: meta.label }))
+  ...Object.entries(priorityMeta).filter(([id]) => id !== 'frequent').map(([id, meta]) => ({ id, label: meta.label }))
 ];
 
 const statusLabels = {
@@ -37,11 +29,6 @@ const statusLabels = {
   lost: 'Perdido',
   pending: 'Pendente'
 };
-
-function getItemType(item) {
-  if (item.subject === 'essay') return 'redacao';
-  return 'conteudo';
-}
 
 function normalizeStatus(value) {
   if (value === 'done' || value === 'pending' || value === 'perdido') return value;
@@ -104,10 +91,9 @@ function ContentCard({ item, status, onStatus }) {
 }
 
 export default function ContentsPage() {
-  const { contentItems, subjectStats, state, actions } = usePlanner();
+  const { contentItems, state, actions } = usePlanner();
   const [statusFilter, setStatusFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [query, setQuery] = useState('');
   const safeItems = Array.isArray(contentItems) ? contentItems : [];
@@ -118,12 +104,11 @@ export default function ContentsPage() {
       const status = normalizeStatus(safeStatuses[item.id]);
       const matchesStatus = statusFilter === 'all' || statusFilter === status;
       const matchesSubject = subjectFilter === 'all' || subjectFilter === item.subject;
-      const matchesType = typeFilter === 'all' || typeFilter === getItemType(item);
       const matchesPriority = priorityFilter === 'all' || priorityFilter === item.priority;
       const matchesQuery = !query || `${item.title} ${item.description}`.toLowerCase().includes(query.toLowerCase());
-      return matchesStatus && matchesSubject && matchesType && matchesPriority && matchesQuery;
+      return matchesStatus && matchesSubject && matchesPriority && matchesQuery;
     });
-  }, [priorityFilter, query, safeItems, safeStatuses, statusFilter, subjectFilter, typeFilter]);
+  }, [priorityFilter, query, safeItems, safeStatuses, statusFilter, subjectFilter]);
 
   const emptyTitle = statusFilter === 'perdido' ? 'Nenhum conteúdo perdido.' : 'Nenhum conteúdo encontrado';
   const emptySubtitle = statusFilter === 'perdido'
@@ -133,7 +118,7 @@ export default function ContentsPage() {
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Conteúdos" title="Banco completo de estudo" subtitle="Filtros mais claros, organizados por matéria, status e tipo de conteúdo." />
+        <SectionHeader eyebrow="Conteúdos" title="Banco completo de estudo" subtitle="Filtros mais claros, organizados por matéria e status." />
         <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-[24px] border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Buscar</p>
@@ -142,7 +127,6 @@ export default function ContentsPage() {
           <FilterGroup label="Matéria" value={subjectFilter} onChange={setSubjectFilter} options={subjectFilters} />
           <FilterGroup label="Prioridade" value={priorityFilter} onChange={setPriorityFilter} options={priorityFilters} />
           <FilterGroup label="Status" value={statusFilter} onChange={setStatusFilter} options={statusFilters} />
-          <FilterGroup label="Tipo" value={typeFilter} onChange={setTypeFilter} options={typeFilters} />
         </div>
       </GlassCard>
 

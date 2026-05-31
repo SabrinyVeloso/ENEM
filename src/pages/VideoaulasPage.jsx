@@ -32,7 +32,14 @@ export default function VideoaulasPage() {
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Videoaulas" title="Curadoria de professores e canais" subtitle="Uma seleção curta e uniforme para cada matéria, com cards simples e o mesmo padrão visual." />
+        <SectionHeader eyebrow="Treinos" title="Recursos e treinos" />
+        <div className="mt-4">
+          <h3 className="text-sm font-bold text-[var(--muted)]">Recursos gratuitos para treinar redação</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a href="https://www.todamateria.com.br/corretor-de-redacao/" target="_blank" rel="noreferrer" className="app-button-primary">Corretor de Redação (ENEM) — Toda Matéria</a>
+            <a href="https://docs.google.com/" target="_blank" rel="noreferrer" className="app-button-secondary">Google Docs</a>
+          </div>
+        </div>
       </GlassCard>
 
       <section className="grid gap-4 xl:grid-cols-2">

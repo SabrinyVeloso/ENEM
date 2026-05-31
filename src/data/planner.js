@@ -687,9 +687,9 @@ function buildBalancedTopicQueue() {
   const subjectBuckets = Object.fromEntries(subjectOrder.map((subject) => [subject, curriculum[subject].map((topic, index) => ({ ...topic, subject, index }))]));
   const queue = [];
   let cursor = 0;
-
-  while (true) {
-    let pushed = false;
+  let pushed = false;
+  do {
+    pushed = false;
     subjectOrder.forEach((subject) => {
       const topic = subjectBuckets[subject][cursor];
       if (topic) {
@@ -697,10 +697,8 @@ function buildBalancedTopicQueue() {
         pushed = true;
       }
     });
-
-    if (!pushed) break;
     cursor += 1;
-  }
+  } while (pushed);
 
   return queue;
 }

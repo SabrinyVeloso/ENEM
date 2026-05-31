@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
-import { BookIcon, ChartIcon, HomeIcon, MoonIcon, PenIcon, RefreshIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
+import { BookIcon, ChartIcon, HomeIcon, MoonIcon, RefreshIcon, SettingsIcon, SunIcon, VideoIcon } from './Icons';
 import { StatusBadge } from './Ui';
 import Onboarding from './Onboarding';
 
@@ -9,9 +9,8 @@ const navItems = [
   { to: '/', label: 'Home', icon: HomeIcon },
   { to: '/conteudos', label: 'Conteúdos', icon: BookIcon },
   { to: '/recuperacao', label: 'Recuperação', icon: RefreshIcon },
-  { to: '/redacao', label: 'Redação', icon: PenIcon },
   { to: '/estatisticas', label: 'Estatísticas', icon: ChartIcon },
-  { to: '/videoaulas', label: 'Vídeo', icon: VideoIcon },
+  { to: '/videoaulas', label: 'Treinos', icon: VideoIcon },
   { to: '/configuracoes', label: 'Config', icon: SettingsIcon }
 ];
 
@@ -77,7 +76,7 @@ export function AppShell() {
 
   const mobileNavClassName = state.focusMode
     ? 'hidden'
-    : 'fixed inset-x-3 bottom-3 z-40 grid grid-cols-7 gap-1 rounded-[24px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
+    : 'fixed inset-x-3 bottom-3 z-40 flex justify-between items-center gap-2 rounded-[20px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]" style={{ '--primary': themePalette.primary, '--accent': themePalette.accent, '--border': themePalette.border, '--muted': themePalette.muted, '--glow': themePalette.glow }}>
@@ -115,11 +114,9 @@ export function AppShell() {
             ))}
           </nav>
 
-          <div className="mt-6 rounded-[28px] border border-[var(--border)] bg-[rgba(255,255,255,0.08)] p-4">
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[var(--muted)]">ENEM</p>
-            <strong className="mt-2 block text-3xl font-black tracking-tight text-[var(--text)]">{dashboard.daysUntilEnem}</strong>
-            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">Faltam dias para o ENEM.</p>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{state.settings.profileName}</p>
+          <div className="mt-6 rounded-[28px] border border-[var(--border)] bg-[rgba(255,255,255,0.08)] p-6 text-center">
+            <strong className="block text-5xl font-black tracking-tight text-[var(--text)]">{dashboard.daysUntilEnem}</strong>
+            <p className="mt-1 text-base font-semibold text-[var(--muted)]">dias restantes</p>
             <div className="mt-4 flex items-center gap-2">
               <StatusBadge status={online ? 'online' : 'offline'}>{online ? 'online' : 'offline'}</StatusBadge>
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--muted)]">{online ? 'sincronizado' : 'modo offline'}</span>
@@ -144,6 +141,8 @@ export function AppShell() {
 
         <nav
           className={mobileNavClassName}
+          role="navigation"
+          aria-label="Menu móvel"
           style={{
             backgroundColor: state.theme === 'dark' ? 'rgba(10, 14, 28, 0.92)' : 'rgba(247, 251, 255, 0.94)',
             borderColor: themePalette.border,
@@ -156,15 +155,16 @@ export function AppShell() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold leading-none transition ${
+                `flex min-h-12 flex-1 min-w-0 overflow-hidden items-center justify-center gap-2 rounded-2xl px-2 py-1 text-[11px] font-bold leading-none transition ${
                   isActive
                     ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white shadow-lg shadow-[var(--glow)]'
-                    : 'text-[var(--muted)]'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 }`
               }
+              aria-label={item.label}
             >
-              <item.icon className="h-4 w-4" />
-              <span className="truncate">{item.label}</span>
+              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <span className="sr-only">{item.label}</span>
             </NavLink>
           ))}
         </nav>

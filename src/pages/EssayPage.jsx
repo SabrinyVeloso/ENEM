@@ -7,10 +7,6 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-function clampScore(value) {
-  return Math.max(0, Math.min(200, Math.round(value)));
-}
-
 function scoreBand(level) {
   if (level >= 5) return 200;
   if (level >= 4) return 160;

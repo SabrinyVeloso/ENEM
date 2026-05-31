@@ -5,12 +5,10 @@ import { GlassCard, SectionHeader, StatusBadge } from '../components/Ui';
 export default function SettingsPage() {
   const { state, actions } = usePlanner();
   const [profileName, setProfileName] = useState(state.settings.profileName);
-  const [studyDaysCount, setStudyDaysCount] = useState(state.settings.studyDaysCount || (state.settings.studyDays || []).length || 5);
   const [studyDays, setStudyDays] = useState(Array.isArray(state.settings.studyDays) ? state.settings.studyDays : ['mon', 'tue', 'wed', 'thu', 'fri']);
   const [studyHoursPerDay, setStudyHoursPerDay] = useState(state.settings.studyHoursPerDay || 90);
   const [studyStartDate, setStudyStartDate] = useState(state.settings.studyStartDate || new Date().toISOString().slice(0, 10));
-  const [targetScore, setTargetScore] = useState(state.settings.targetScore || '700+');
-  const [level, setLevel] = useState(state.settings.level || 'Intermediário');
+  const studyDaysCount = state.settings.studyDaysCount || (state.settings.studyDays || []).length || 5;
 
   const weekdays = [
     { id: 'mon', label: 'Seg' },
@@ -44,8 +42,6 @@ export default function SettingsPage() {
       studyDays,
       studyHoursPerDay,
       studyStartDate,
-      targetScore,
-      level,
       onboardCompleted: true
     };
     actions.updateSettings(nextSettings);
@@ -64,19 +60,7 @@ export default function SettingsPage() {
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Como você deseja ser chamado</p>
             <input className="input-shell w-full" value={profileName || ''} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
 
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quantos dias por semana você vai estudar?</p>
-            <div className="flex flex-wrap gap-2">
-              {[1, 2, 3, 4, 5, 6, 7].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setStudyDaysCount(value)}
-                  className={`app-button-secondary ${studyDaysCount === value ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
+            {/* removed: Quantos dias por semana (kept weekly day selectors separately) */}
 
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quais dias da semana você vai estudar?</p>
             <div className="flex flex-wrap gap-2">
@@ -106,33 +90,7 @@ export default function SettingsPage() {
               ))}
             </div>
 
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Qual sua meta de nota no ENEM?</p>
-            <div className="flex flex-wrap gap-2">
-              {['600+', '700+', '800+', '900+'].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setTargetScore(option)}
-                  className={`app-button-secondary ${targetScore === option ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Qual seu nível atual?</p>
-            <div className="flex flex-wrap gap-2">
-              {['Iniciante', 'Intermediário', 'Avançado'].map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setLevel(option)}
-                  className={`app-button-secondary ${level === option ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
+            {/* removed: target score and level selectors per user request */}
 
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quando você quer começar a estudar?</p>
             <input className="input-shell w-full" type="date" value={studyStartDate} onChange={(event) => setStudyStartDate(event.target.value)} />

@@ -333,3 +333,20 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+@media (max-width: 640px) {
+  .app-heading {
+    font-size: 1.125rem;
+  }
+
+  .app-button-primary,
+  .app-button-secondary {
+    min-height: 3.5rem;
+    font-size: 1rem;
+    padding: 0 1.25rem;
+  }
+
+  .input-shell {
+    padding: 0.75rem 0.9rem;
+  }
+}

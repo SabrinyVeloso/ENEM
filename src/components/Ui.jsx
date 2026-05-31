@@ -44,7 +44,7 @@ export function StatTile({ label, value, caption, tone = 'good' }) {
     good: 'text-emerald-400',
     warn: 'text-amber-400',
     bad: 'text-rose-400',
-    brand: 'text-[var(--accent)]'
+    brand: 'text-[var(--muted)]'
   };
 
   return (

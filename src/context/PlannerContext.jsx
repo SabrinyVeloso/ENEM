@@ -7,7 +7,6 @@ import {
   essayTopics,
   getDaysUntilEnem,
   repertoires,
-  schedule,
   buildAdaptiveSchedule,
   scheduleStart,
   priorityMeta,
@@ -83,9 +82,7 @@ function normalizeContentStatus(status) {
   return 'pending';
 }
 
-function getReviewDueDate(days = 2) {
-  return toISODate(addDays(new Date(), days));
-}
+// removed unused `getReviewDueDate` helper
 
 function getTodayISO() {
   return toISODate(new Date());
