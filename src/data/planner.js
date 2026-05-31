@@ -451,7 +451,13 @@ export const settingsDefaults = {
   profileName: '',
   weeklyGoal: 5,
   studyMinutes: 90,
-  notifications: true
+  notifications: true,
+  onboardCompleted: false,
+  studyDaysCount: 5,
+  studyDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  studyHoursPerDay: 90,
+  targetScore: '700+',
+  level: 'Intermediário'
 };
 
 export const scheduleStart = '2026-07-05';
@@ -656,4 +662,138 @@ export function formatLongDate(value) {
 
 export function formatMonthLabel(value) {
   return monthFormatter.format(fromISODate(value));
+}
+
+const weekdayOrder = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const weekdayLabelByKey = {
+  sun: 'Domingo',
+  mon: 'Segunda',
+  tue: 'Terça',
+  wed: 'Quarta',
+  thu: 'Quinta',
+  fri: 'Sexta',
+  sat: 'Sábado'
+};
+
+function normalizeStudyDays(studyDays = []) {
+  const filtered = studyDays.filter((day) => weekdayOrder.includes(day));
+  if (filtered.length > 0) return filtered;
+  return ['mon', 'tue', 'wed', 'thu', 'fri'];
+}
+
+function buildBalancedTopicQueue() {
+  const subjectOrder = studyOrder;
+  const subjectBuckets = Object.fromEntries(subjectOrder.map((subject) => [subject, curriculum[subject].map((topic, index) => ({ ...topic, subject, index }))]));
+  const queue = [];
+  let cursor = 0;
+
+  while (true) {
+    let pushed = false;
+    subjectOrder.forEach((subject) => {
+      const topic = subjectBuckets[subject][cursor];
+      if (topic) {
+        queue.push(topic);
+        pushed = true;
+      }
+    });
+
+    if (!pushed) break;
+    cursor += 1;
+  }
+
+  return queue;
+}
+
+function calculateTopicsPerSession(totalTopics, totalStudyDays, studyMinutes) {
+  if (!totalStudyDays) return totalTopics;
+  const required = Math.ceil(totalTopics / totalStudyDays);
+  const minutesBonus = studyMinutes >= 120 ? 1 : studyMinutes >= 90 ? 0 : 0;
+  return Math.max(1, required + minutesBonus);
+}
+
+export function buildAdaptiveSchedule(settings = {}) {
+  const start = fromISODate(scheduleStart);
+  const end = fromISODate(enemDate);
+  const studyDays = normalizeStudyDays(settings.studyDays || []);
+  const studyMinutes = Number(settings.studyHoursPerDay || settings.studyMinutes || 90);
+  const topicQueue = buildBalancedTopicQueue();
+  const totalDays = Math.max(1, Math.ceil((end - start) / 86400000) + 1);
+
+  let totalStudyDays = 0;
+  for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
+    const day = addDays(start, dayIndex);
+    const weekdayKey = weekdayOrder[day.getDay()];
+    if (studyDays.includes(weekdayKey)) totalStudyDays += 1;
+  }
+
+  const topicsPerSession = calculateTopicsPerSession(topicQueue.length, totalStudyDays, studyMinutes);
+  const weeks = [];
+  const items = [];
+  let queueIndex = 0;
+
+  for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
+    const currentDate = addDays(start, dayIndex);
+    const weekdayKey = weekdayOrder[currentDate.getDay()];
+    const isStudyDay = studyDays.includes(weekdayKey);
+    const weekNumber = Math.floor(dayIndex / 7) + 1;
+    const weekBucket = weeks[weekNumber - 1] || { weekNumber, start: toISODate(addDays(start, (weekNumber - 1) * 7)), days: [] };
+
+    let dayEntry;
+    if (isStudyDay && queueIndex < topicQueue.length) {
+      const assignedTopics = topicQueue.slice(queueIndex, queueIndex + topicsPerSession);
+      queueIndex += assignedTopics.length;
+      const primary = assignedTopics[0];
+      dayEntry = {
+        date: toISODate(currentDate),
+        weekday: weekdayLabelByKey[weekdayKey],
+        type: 'study',
+        subject: primary.subject,
+        subjectLabel: subjectMeta[primary.subject].label,
+        title: primary.title,
+        description: `${subjectMeta[primary.subject].label} · ${assignedTopics.length} conteúdo${assignedTopics.length > 1 ? 's' : ''} nesta sessão.`,
+        focus: primary.frequency,
+        blocks: ['Teoria', 'Exercícios', 'Revisão'],
+        contentId: `${primary.subject}-${primary.index + 1}`,
+        assignedContentIds: assignedTopics.map((topic) => `${topic.subject}-${topic.index + 1}`),
+        assignedTopics: assignedTopics.map((topic) => topic.title)
+      };
+
+      assignedTopics.forEach((topic) => {
+        const itemId = `${topic.subject}-${topic.index + 1}`;
+        items.push({
+          ...createContentItem(topic.subject, topic.index, topic, weekNumber, toISODate(currentDate)),
+          id: itemId,
+          scheduledFor: toISODate(currentDate),
+          assignedSessionSize: topicsPerSession
+        });
+      });
+    } else if (weekdayKey === 'sat') {
+      dayEntry = {
+        date: toISODate(currentDate),
+        weekday: weekdayLabelByKey[weekdayKey],
+        type: 'simulado',
+        subject: 'simulado',
+        subjectLabel: 'Simulado',
+        title: 'Simulado ou revisão longa',
+        description: 'Espaço para consolidar o que foi estudado na semana.',
+        contentId: null
+      };
+    } else {
+      dayEntry = {
+        date: toISODate(currentDate),
+        weekday: weekdayLabelByKey[weekdayKey],
+        type: 'rest',
+        subject: null,
+        subjectLabel: 'Descanso',
+        title: 'Descanso ativo',
+        description: 'Recuperação e revisão leve.',
+        contentId: null
+      };
+    }
+
+    weekBucket.days.push(dayEntry);
+    weeks[weekNumber - 1] = weekBucket;
+  }
+
+  return { weeks, items };
 }

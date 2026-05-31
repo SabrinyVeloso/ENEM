@@ -8,6 +8,7 @@ import {
   getDaysUntilEnem,
   repertoires,
   schedule,
+  buildAdaptiveSchedule,
   scheduleStart,
   priorityMeta,
   settingsDefaults,
@@ -85,27 +86,27 @@ function getReviewDueDate(days = 2) {
   return toISODate(addDays(new Date(), days));
 }
 
-function getStudyDays() {
-  return schedule.weeks.flatMap((week) => week.days.filter((day) => day.type === 'study'));
+function getStudyDays(scheduleData) {
+  return scheduleData.weeks.flatMap((week) => week.days.filter((day) => day.type === 'study'));
 }
 
-function getCurrentWeek() {
+function getCurrentWeek(scheduleData) {
   const today = toISODate(new Date());
-  return schedule.weeks.find((week) => week.days.some((day) => day.date === today)) || schedule.weeks[0];
+  return scheduleData.weeks.find((week) => week.days.some((day) => day.date === today)) || scheduleData.weeks[0];
 }
 
-function getCurrentDay() {
+function getCurrentDay(scheduleData) {
   const today = toISODate(new Date());
-  const current = schedule.weeks.flatMap((week) => week.days).find((day) => day.date === today);
-  return current || schedule.weeks[0].days[0];
+  const current = scheduleData.weeks.flatMap((week) => week.days).find((day) => day.date === today);
+  return current || scheduleData.weeks[0].days[0];
 }
 
-function getContentItems() {
-  return schedule.items;
+function getContentItems(scheduleData) {
+  return scheduleData.items;
 }
 
-function getContentBySubject(subject) {
-  return getContentItems().filter((item) => item.subject === subject);
+function getContentBySubject(scheduleData, subject) {
+  return getContentItems(scheduleData).filter((item) => item.subject === subject);
 }
 
 function getContentStatusMap(state) {
@@ -116,9 +117,9 @@ function getContentStatus(state, contentId) {
   return normalizeContentStatus(getContentStatusMap(state)[contentId]);
 }
 
-function buildSubjectStats(state) {
+function buildSubjectStats(state, scheduleData) {
   return Object.entries(curriculum).map(([subject, topics]) => {
-    const items = getContentBySubject(subject);
+    const items = getContentBySubject(scheduleData, subject);
     const done = items.filter((item) => getContentStatus(state, item.id) === 'done').length;
     const lost = items.filter((item) => getContentStatus(state, item.id) === 'perdido').length;
     const pending = items.length - done - lost;
@@ -146,8 +147,8 @@ function buildSubjectStats(state) {
   });
 }
 
-function buildHeatmap(state) {
-  return schedule.weeks.flatMap((week) =>
+function buildHeatmap(state, scheduleData) {
+  return scheduleData.weeks.flatMap((week) =>
     week.days.map((day) => {
       const status = day.type === 'study' ? getContentStatus(state, day.contentId) : day.type;
       return {
@@ -159,8 +160,8 @@ function buildHeatmap(state) {
   );
 }
 
-function buildCurrentStreak(state) {
-  const days = getStudyDays();
+function buildCurrentStreak(state, scheduleData) {
+  const days = getStudyDays(scheduleData);
   let streak = 0;
   for (let index = days.length - 1; index >= 0; index -= 1) {
     const day = days[index];
@@ -173,21 +174,21 @@ function buildCurrentStreak(state) {
   return streak;
 }
 
-function buildDashboard(state) {
-  const allItems = getContentItems();
+function buildDashboard(state, scheduleData) {
+  const allItems = getContentItems(scheduleData);
   const completed = allItems.filter((item) => getContentStatus(state, item.id) === 'done').length;
   const lost = allItems.filter((item) => getContentStatus(state, item.id) === 'perdido').length;
   const pending = allItems.length - completed - lost;
-  const currentWeek = getCurrentWeek();
-  const currentDay = getCurrentDay();
+  const currentWeek = getCurrentWeek(scheduleData);
+  const currentDay = getCurrentDay(scheduleData);
   const currentWeekStudyDays = currentWeek.days.filter((day) => day.type === 'study');
   const currentWeekDone = currentWeekStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const currentWeekProgress = Math.round((currentWeekDone / currentWeekStudyDays.length) * 100) || 0;
   const currentMonthKey = new Date().toISOString().slice(0, 7);
-  const monthStudyDays = buildHeatmap(state).filter((day) => day.date.startsWith(currentMonthKey) && day.type === 'study');
+  const monthStudyDays = buildHeatmap(state, scheduleData).filter((day) => day.date.startsWith(currentMonthKey) && day.type === 'study');
   const monthDone = monthStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const monthProgress = Math.round((monthDone / monthStudyDays.length) * 100) || 0;
-  const streak = buildCurrentStreak(state);
+  const streak = buildCurrentStreak(state, scheduleData);
   const today = toISODate(new Date());
   const reviewItems = allItems
     .filter((item) => getContentStatus(state, item.id) === 'perdido')
@@ -207,9 +208,9 @@ function buildDashboard(state) {
     weekGoal: state.settings.weeklyGoal,
     daysUntilEnem: getDaysUntilEnem(),
     total: allItems.length,
-    subjectStats: buildSubjectStats(state),
-    heatmap: buildHeatmap(state),
-    achievements: buildAchievements(state),
+    subjectStats: buildSubjectStats(state, scheduleData),
+    heatmap: buildHeatmap(state, scheduleData),
+    achievements: buildAchievements(state, scheduleData),
     focusMinutes: state.focusHistory.reduce((acc, item) => acc + item.minutes, 0),
     reviewItems,
     essayCount: state.essays.length,
@@ -218,8 +219,8 @@ function buildDashboard(state) {
   };
 }
 
-function buildAchievements(state) {
-  const dashboard = buildDashboardSummary(state);
+function buildAchievements(state, scheduleData) {
+  const dashboard = buildDashboardSummary(state, scheduleData);
   return [
     { id: 'streak', label: '🔥 7 dias estudando', done: dashboard.streak >= 7 },
     { id: 'contents', label: '📚 30 conteúdos concluídos', done: dashboard.completed >= 30 },
@@ -229,10 +230,10 @@ function buildAchievements(state) {
   ];
 }
 
-function buildDashboardSummary(state) {
-  const allItems = getContentItems();
+function buildDashboardSummary(state, scheduleData) {
+  const allItems = getContentItems(scheduleData);
   const completed = allItems.filter((item) => getContentStatus(state, item.id) === 'done').length;
-  const streak = buildCurrentStreak(state);
+  const streak = buildCurrentStreak(state, scheduleData);
   return { completed, streak };
 }
 
@@ -356,6 +357,15 @@ export function PlannerProvider({ children }) {
           }
         }));
       },
+      generateSchedule(settings) {
+        setState((current) => ({
+          ...current,
+          settings: {
+            ...current.settings,
+            ...settings
+          }
+        }));
+      },
       resetAll() {
         setState(createDefaultState());
       }
@@ -363,19 +373,20 @@ export function PlannerProvider({ children }) {
   }, []);
 
   const derived = useMemo(() => {
+    const adaptiveSchedule = buildAdaptiveSchedule(state.settings);
     return {
-      dashboard: buildDashboard(state),
-      currentWeek: getCurrentWeek(),
-      currentDay: getCurrentDay(),
-      subjectStats: buildSubjectStats(state),
-      heatmap: buildHeatmap(state),
-      contentItems: getContentItems(),
+      dashboard: buildDashboard(state, adaptiveSchedule),
+      currentWeek: getCurrentWeek(adaptiveSchedule),
+      currentDay: getCurrentDay(adaptiveSchedule),
+      subjectStats: buildSubjectStats(state, adaptiveSchedule),
+      heatmap: buildHeatmap(state, adaptiveSchedule),
+      contentItems: getContentItems(adaptiveSchedule),
       contentBySubject: {
-        math: getContentBySubject('math'),
-        language: getContentBySubject('language'),
-        humanas: getContentBySubject('humanas'),
-        nature: getContentBySubject('nature'),
-        essay: getContentBySubject('essay')
+        math: getContentBySubject(adaptiveSchedule, 'math'),
+        language: getContentBySubject(adaptiveSchedule, 'language'),
+        humanas: getContentBySubject(adaptiveSchedule, 'humanas'),
+        nature: getContentBySubject(adaptiveSchedule, 'nature'),
+        essay: getContentBySubject(adaptiveSchedule, 'essay')
       },
       videoChannels,
       baseQuestions,
@@ -384,7 +395,7 @@ export function PlannerProvider({ children }) {
       connectors,
       themePalette: themePalettes[state.theme],
       subjectMeta,
-      schedule,
+      schedule: adaptiveSchedule,
       scheduleStart,
       enemDate
     };
