@@ -3,13 +3,10 @@ import { GlassCard, SectionHeader } from './Ui';
 import { usePlanner } from '../context/PlannerContext';
 
 export default function Onboarding() {
-  const { state, actions } = usePlanner();
+  const { actions } = usePlanner();
   const [step, setStep] = useState(0);
-  const [daysCount, setDaysCount] = useState(5);
   const [daysOfWeek, setDaysOfWeek] = useState([]);
-  const [hoursPerDay, setHoursPerDay] = useState(1.5);
-  const [targetScore, setTargetScore] = useState('700+');
-  const [level, setLevel] = useState('Intermediário');
+  const [hoursPerDay, setHoursPerDay] = useState(90);
 
   const weekdays = [
     { id: 'mon', label: 'Seg' },
@@ -19,6 +16,14 @@ export default function Onboarding() {
     { id: 'fri', label: 'Sex' },
     { id: 'sat', label: 'Sáb' },
     { id: 'sun', label: 'Dom' }
+  ];
+
+  const studyTimeOptions = [
+    { label: '30 minutos', value: 30 },
+    { label: '45 minutos', value: 45 },
+    { label: '1h', value: 60 },
+    { label: '1h e 30 mins', value: 90 },
+    { label: '2h', value: 120 }
   ];
 
   function toggleDay(d) {
@@ -33,13 +38,10 @@ export default function Onboarding() {
   }
 
   function submit() {
-    // Normalize values and save to settings
     const settings = {
-      studyDaysCount: Number(daysCount),
+      studyDaysCount: daysOfWeek.length || 5,
       studyDays: daysOfWeek,
       studyHoursPerDay: Number(hoursPerDay),
-      targetScore,
-      level,
       onboardCompleted: true
     };
     actions.updateSettings(settings);
@@ -55,13 +57,6 @@ export default function Onboarding() {
         <div className="mt-4">
           {step === 0 && (
             <div className="grid gap-3">
-              <p className="text-sm text-[var(--muted)]">Quantos dias por semana você pretende estudar?</p>
-              <div className="flex gap-2 flex-wrap">
-                {[1,2,3,4,5,6,7].map((n) => (
-                  <button key={n} type="button" onClick={() => setDaysCount(n)} className={`app-button-secondary ${daysCount===n? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white':''}`}>{n} dias</button>
-                ))}
-              </div>
-
               <p className="text-sm text-[var(--muted)]">Quais dias da semana você vai estudar? (toque para selecionar)</p>
               <div className="flex gap-2 flex-wrap">
                 {weekdays.map((d) => (
@@ -73,13 +68,17 @@ export default function Onboarding() {
 
           {step === 1 && (
             <div className="grid gap-3">
-              <p className="text-sm text-[var(--muted)]">Quantas horas por dia você pretende estudar?</p>
-              <input className="input-shell" type="number" min="0.25" step="0.25" value={hoursPerDay} onChange={(e) => setHoursPerDay(e.target.value)} />
-
-              <p className="text-sm text-[var(--muted)]">Qual sua meta de nota no ENEM?</p>
+              <p className="text-sm text-[var(--muted)]">Por quanto tempo você deseja estudar?</p>
               <div className="flex gap-2 flex-wrap">
-                {['600+','700+','800+','900+'].map((opt) => (
-                  <button key={opt} type="button" onClick={() => setTargetScore(opt)} className={`app-button-secondary ${targetScore===opt? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white':''}`}>{opt}</button>
+                {studyTimeOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setHoursPerDay(opt.value)}
+                    className={`app-button-secondary ${hoursPerDay === opt.value ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
+                  >
+                    {opt.label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -87,24 +86,10 @@ export default function Onboarding() {
 
           {step === 2 && (
             <div className="grid gap-3">
-              <p className="text-sm text-[var(--muted)]">Qual seu nível atual?</p>
-              <div className="flex gap-2 flex-wrap">
-                {['Iniciante','Intermediário','Avançado'].map((opt) => (
-                  <button key={opt} type="button" onClick={() => setLevel(opt)} className={`app-button-secondary ${level===opt? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white':''}`}>{opt}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="grid gap-3">
               <p className="text-sm text-[var(--muted)]">Resumo</p>
               <ul className="text-sm">
-                <li>Dias por semana: {daysCount}</li>
                 <li>Dias escolhidos: {daysOfWeek.join(', ') || 'Nenhum'}</li>
-                <li>Horas por dia: {hoursPerDay}</li>
-                <li>Meta no ENEM: {targetScore}</li>
-                <li>Nível: {level}</li>
+                <li>Tempo de estudo: {studyTimeOptions.find((option) => option.value === hoursPerDay)?.label || `${hoursPerDay} minutos`}</li>
               </ul>
 
               <p className="text-sm text-[var(--muted)]">Ao confirmar, seu cronograma será gerado automaticamente e você será levado ao painel.</p>
@@ -117,7 +102,7 @@ export default function Onboarding() {
             {step > 0 ? <button type="button" onClick={prev} className="app-button-secondary">Voltar</button> : null}
           </div>
           <div className="flex gap-2">
-            {step < 3 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
+            {step < 2 ? <button type="button" onClick={next} className="app-button-primary">Próximo</button> : <button type="button" onClick={submit} className="app-button-primary">Confirmar e continuar</button>}
           </div>
         </div>
       </GlassCard>
