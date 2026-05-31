@@ -27,7 +27,7 @@ function CompactDay({ day, status, onStatus }) {
       {day.type === 'study' ? (
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button type="button" onClick={() => onStatus(day.contentId, 'done')} className="app-button-secondary w-full text-xs">Estudado</button>
-          <button type="button" onClick={() => onStatus(day.contentId, 'lost')} className="app-button-secondary w-full text-xs">Perdido</button>
+          <button type="button" onClick={() => onStatus(day.contentId, 'perdido')} className="app-button-secondary w-full text-xs">Perdido</button>
           <button type="button" onClick={() => onStatus(day.contentId, 'pending')} className="app-button-secondary w-full text-xs">Pendente</button>
         </div>
       ) : null}
@@ -79,7 +79,7 @@ export default function HomePage() {
             <strong className="mt-2 block text-xl font-black tracking-tight text-[var(--text)]">{currentDay.title}</strong>
             <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{formatLongDate(currentDay.date)}</p>
             <div className="mt-3">
-              <ProgressBar value={currentDay.type === 'study' ? (currentStatus === 'done' ? 100 : currentStatus === 'lost' ? 20 : 45) : 60} />
+              <ProgressBar value={currentDay.type === 'study' ? (currentStatus === 'done' ? 100 : currentStatus === 'perdido' ? 20 : 45) : 60} />
             </div>
           </div>
 

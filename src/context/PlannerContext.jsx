@@ -13,6 +13,7 @@ import {
   settingsDefaults,
   subjectMeta,
   themePalettes,
+  addDays,
   toISODate,
   videoChannels
 } from '../data/planner';
@@ -52,7 +53,9 @@ function mergeState(base, incoming) {
   if (!incoming || typeof incoming !== 'object') return next;
   next.theme = incoming.theme || next.theme;
   next.settings = { ...next.settings, ...(incoming.settings || {}) };
-  next.contentStatuses = { ...(incoming.contentStatuses || {}) };
+  next.contentStatuses = Object.fromEntries(
+    Object.entries(incoming.contentStatuses || {}).map(([contentId, status]) => [contentId, normalizeContentStatus(status)])
+  );
   next.reviewQueue = Array.isArray(incoming.reviewQueue) ? incoming.reviewQueue : [];
   next.reviewSchedule = { ...(incoming.reviewSchedule || {}) };
   next.focusMode = Boolean(incoming.focusMode);
@@ -69,7 +72,13 @@ function saveJSON(key, value) {
 }
 
 function getStatusOrder() {
-  return ['pending', 'done', 'lost'];
+  return ['pending', 'done', 'perdido'];
+}
+
+function normalizeContentStatus(status) {
+  if (status === 'perdido' || status === 'lost' || status === 'missed') return 'perdido';
+  if (status === 'done' || status === 'pending') return status;
+  return 'pending';
 }
 
 function getReviewDueDate(days = 2) {
@@ -104,14 +113,14 @@ function getContentStatusMap(state) {
 }
 
 function getContentStatus(state, contentId) {
-  return getContentStatusMap(state)[contentId] || 'pending';
+  return normalizeContentStatus(getContentStatusMap(state)[contentId]);
 }
 
 function buildSubjectStats(state) {
   return Object.entries(curriculum).map(([subject, topics]) => {
     const items = getContentBySubject(subject);
     const done = items.filter((item) => getContentStatus(state, item.id) === 'done').length;
-    const lost = items.filter((item) => getContentStatus(state, item.id) === 'lost').length;
+    const lost = items.filter((item) => getContentStatus(state, item.id) === 'perdido').length;
     const pending = items.length - done - lost;
     const priorityCounts = Object.fromEntries(Object.keys(priorityMeta).map((key) => [key, 0]));
     items.forEach((item) => {
@@ -167,7 +176,7 @@ function buildCurrentStreak(state) {
 function buildDashboard(state) {
   const allItems = getContentItems();
   const completed = allItems.filter((item) => getContentStatus(state, item.id) === 'done').length;
-  const lost = allItems.filter((item) => getContentStatus(state, item.id) === 'lost').length;
+  const lost = allItems.filter((item) => getContentStatus(state, item.id) === 'perdido').length;
   const pending = allItems.length - completed - lost;
   const currentWeek = getCurrentWeek();
   const currentDay = getCurrentDay();
@@ -181,7 +190,7 @@ function buildDashboard(state) {
   const streak = buildCurrentStreak(state);
   const today = toISODate(new Date());
   const reviewItems = allItems
-    .filter((item) => getContentStatus(state, item.id) === 'lost')
+    .filter((item) => getContentStatus(state, item.id) === 'perdido')
     .filter((item) => !state.reviewSchedule?.[item.id] || state.reviewSchedule[item.id] <= today)
     .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
 
@@ -249,19 +258,20 @@ export function PlannerProvider({ children }) {
         setState((current) => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
       },
       setContentStatus(contentId, status) {
+        const nextStatus = normalizeContentStatus(status);
         setState((current) => ({
           ...current,
           contentStatuses: {
             ...current.contentStatuses,
-            [contentId]: status
+            [contentId]: nextStatus
           },
-          reviewSchedule: status === 'lost'
+          reviewSchedule: nextStatus === 'perdido'
             ? {
                 ...current.reviewSchedule,
                 [contentId]: getReviewDueDate(2)
               }
             : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
-          reviewQueue: status === 'lost'
+          reviewQueue: nextStatus === 'perdido'
             ? Array.from(new Set([...(current.reviewQueue || []), contentId]))
             : (current.reviewQueue || []).filter((item) => item !== contentId)
         }));
@@ -274,7 +284,7 @@ export function PlannerProvider({ children }) {
       },
       cycleContentStatus(contentId) {
         setState((current) => {
-          const currentStatus = current.contentStatuses[contentId] || 'pending';
+          const currentStatus = normalizeContentStatus(current.contentStatuses[contentId]);
           const nextIndex = (getStatusOrder().indexOf(currentStatus) + 1) % getStatusOrder().length;
           return {
             ...current,
@@ -282,13 +292,13 @@ export function PlannerProvider({ children }) {
               ...current.contentStatuses,
               [contentId]: getStatusOrder()[nextIndex]
             },
-            reviewSchedule: getStatusOrder()[nextIndex] === 'lost'
+            reviewSchedule: getStatusOrder()[nextIndex] === 'perdido'
               ? {
                   ...current.reviewSchedule,
                   [contentId]: getReviewDueDate(2)
                 }
               : Object.fromEntries(Object.entries(current.reviewSchedule || {}).filter(([key]) => key !== contentId)),
-            reviewQueue: getStatusOrder()[nextIndex] === 'lost'
+            reviewQueue: getStatusOrder()[nextIndex] === 'perdido'
               ? Array.from(new Set([...(current.reviewQueue || []), contentId]))
               : (current.reviewQueue || []).filter((item) => item !== contentId)
           };

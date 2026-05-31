@@ -75,6 +75,7 @@ export function FilterChip({ active, children, onClick }) {
 export function StatusBadge({ status, children }) {
   const palette = {
     done: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+    perdido: 'bg-rose-500/15 text-rose-300 border-rose-500/25',
     lost: 'bg-rose-500/15 text-rose-300 border-rose-500/25',
     pending: 'bg-white/10 text-[var(--muted)] border-[var(--border)]',
     rest: 'bg-sky-500/15 text-sky-300 border-sky-500/25',

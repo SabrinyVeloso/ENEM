@@ -6,7 +6,7 @@ import { priorityMeta } from '../data/planner';
 const statusFilters = [
   { id: 'all', label: 'Todos' },
   { id: 'done', label: 'Estudados' },
-  { id: 'lost', label: 'Perdidos' },
+  { id: 'perdido', label: 'Perdidos' },
   { id: 'pending', label: 'Não estudados' }
 ];
 
@@ -44,7 +44,9 @@ function getItemType(item) {
 }
 
 function normalizeStatus(value) {
-  return value === 'done' || value === 'lost' || value === 'pending' ? value : 'pending';
+  if (value === 'done' || value === 'pending' || value === 'perdido') return value;
+  if (value === 'lost' || value === 'missed') return 'perdido';
+  return 'pending';
 }
 
 function FilterGroup({ label, value, onChange, options }) {
@@ -67,7 +69,7 @@ function ContentCard({ item, status, onStatus }) {
   const blocks = Array.isArray(item.blocks) ? item.blocks : [];
 
   return (
-    <GlassCard className={`p-4 sm:p-5 ${status === 'done' ? 'bg-emerald-500/10' : status === 'lost' ? 'bg-rose-500/10' : 'bg-white/5'}`}>
+    <GlassCard className={`p-4 sm:p-5 ${status === 'done' ? 'bg-emerald-500/10' : status === 'perdido' ? 'bg-rose-500/10' : 'bg-white/5'}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Semana {item.weekNumber}</p>
@@ -90,12 +92,12 @@ function ContentCard({ item, status, onStatus }) {
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'done')}>Estudado</button>
-        <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'lost')}>Perdido</button>
+        <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'perdido')}>Perdido</button>
         <button type="button" className="app-button-secondary w-full" onClick={() => onStatus(item.id, 'pending')}>Pendente</button>
       </div>
 
       <div className="mt-4">
-        <ProgressBar value={status === 'done' ? 100 : status === 'lost' ? 20 : 40} />
+        <ProgressBar value={status === 'done' ? 100 : status === 'perdido' ? 20 : 40} />
       </div>
     </GlassCard>
   );
@@ -123,8 +125,8 @@ export default function ContentsPage() {
     });
   }, [priorityFilter, query, safeItems, safeStatuses, statusFilter, subjectFilter, typeFilter]);
 
-  const emptyTitle = statusFilter === 'lost' ? 'Nenhum conteúdo perdido encontrado' : 'Nenhum conteúdo encontrado';
-  const emptySubtitle = statusFilter === 'lost'
+  const emptyTitle = statusFilter === 'perdido' ? 'Nenhum conteúdo perdido.' : 'Nenhum conteúdo encontrado';
+  const emptySubtitle = statusFilter === 'perdido'
     ? 'Marque conteúdos como perdidos para vê-los aqui. Se já havia itens perdidos, revise os filtros aplicados.'
     : 'Tente outro filtro ou pesquise por parte do tema.';
 
