@@ -7,7 +7,7 @@ const statusFilters = [
   { id: 'all', label: 'Todos' },
   { id: 'done', label: 'Estudados' },
   { id: 'perdido', label: 'Perdidos' },
-  { id: 'pending', label: 'Não estudados' }
+  { id: 'pending', label: 'Pendentes' }
 ];
 
 const subjectFilters = [
@@ -26,7 +26,7 @@ const priorityFilters = [
 
 const statusLabels = {
   done: 'Estudado',
-  lost: 'Perdido',
+  perdido: 'Perdido',
   pending: 'Pendente'
 };
 
@@ -91,7 +91,7 @@ function ContentCard({ item, status, onStatus }) {
 }
 
 export default function ContentsPage() {
-  const { contentItems, state, actions } = usePlanner();
+  const { contentItems, state, actions, schedule } = usePlanner();
   const [statusFilter, setStatusFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -110,16 +110,16 @@ export default function ContentsPage() {
     });
   }, [priorityFilter, query, safeItems, safeStatuses, statusFilter, subjectFilter]);
 
-  const emptyTitle = statusFilter === 'perdido' ? 'Nenhum conteúdo perdido.' : 'Nenhum conteúdo encontrado';
+  const emptyTitle = statusFilter === 'perdido' ? 'Nenhum conteúdo perdido.' : statusFilter === 'done' ? 'Nenhum conteúdo estudado.' : 'Nenhum conteúdo encontrado';
   const emptySubtitle = statusFilter === 'perdido'
     ? 'Marque conteúdos como perdidos para vê-los aqui. Se já havia itens perdidos, revise os filtros aplicados.'
-    : 'Tente outro filtro ou pesquise por parte do tema.';
+    : 'Tente outro filtro, outra semana ou pesquise por parte do tema.';
 
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Conteúdos" title="Banco completo de estudo" subtitle="Filtros mais claros, organizados por matéria e status." />
-        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+        <SectionHeader eyebrow="Cronograma" title="Banco completo de estudo" subtitle="Todos os conteúdos, organizados por matéria e status." />
+        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
           <div className="rounded-[24px] border border-[var(--border)] bg-[rgba(255,255,255,0.04)] p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Buscar</p>
             <input className="input-shell mt-3" placeholder="Pesquisar tema, disciplina ou descrição" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -130,11 +130,9 @@ export default function ContentsPage() {
         </div>
       </GlassCard>
 
-      {/* Subject summary cards removed as requested */}
-
       <section className="grid gap-4">
         {filtered.length === 0 ? (
-          <EmptyState title={emptyTitle} subtitle={emptySubtitle} action={statusFilter !== 'all' ? <button type="button" className="app-button-secondary" onClick={() => setStatusFilter('all')}>Limpar filtro de status</button> : null} />
+          <EmptyState title={emptyTitle} subtitle={emptySubtitle} action={(statusFilter !== 'all' || subjectFilter !== 'all' || priorityFilter !== 'all') ? <button type="button" className="app-button-secondary" onClick={() => { setStatusFilter('all'); setSubjectFilter('all'); setPriorityFilter('all'); }}>Limpar filtros</button> : null} />
         ) : (
           filtered.map((item) => <ContentCard key={item.id} item={item} status={normalizeStatus(safeStatuses[item.id])} onStatus={actions.setContentStatus} />)
         )}

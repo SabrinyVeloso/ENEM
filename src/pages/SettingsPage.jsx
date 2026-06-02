@@ -6,6 +6,7 @@ export default function SettingsPage() {
   const { state, actions } = usePlanner();
   const [profileName, setProfileName] = useState(state.settings.profileName);
   const [studyDays, setStudyDays] = useState(Array.isArray(state.settings.studyDays) ? state.settings.studyDays : ['mon', 'tue', 'wed', 'thu', 'fri']);
+  const [reviewDays, setReviewDays] = useState(Array.isArray(state.settings.reviewDays) ? state.settings.reviewDays : ['sun']);
   const [studyHoursPerDay, setStudyHoursPerDay] = useState(state.settings.studyHoursPerDay || 90);
   const [studyStartDate, setStudyStartDate] = useState(state.settings.studyStartDate || new Date().toISOString().slice(0, 10));
   const studyDaysCount = state.settings.studyDaysCount || (state.settings.studyDays || []).length || 5;
@@ -35,11 +36,19 @@ export default function SettingsPage() {
     });
   }
 
+  function toggleReviewDay(dayId) {
+    setReviewDays((current) => {
+      if (current.includes(dayId)) return current.filter((value) => value !== dayId);
+      return [...current, dayId];
+    });
+  }
+
   function saveSettings() {
     const nextSettings = {
       profileName,
       studyDaysCount,
       studyDays,
+      reviewDays,
       studyHoursPerDay,
       studyStartDate,
       onboardCompleted: true
@@ -59,11 +68,11 @@ export default function SettingsPage() {
   return (
     <div className="grid gap-4 pb-6">
       <GlassCard className="p-4 sm:p-5">
-        <SectionHeader eyebrow="Configurações" title="Tema, metas, perfil e notificações" subtitle="Ajustes rápidos, com tudo salvo localmente no navegador." />
+        <SectionHeader eyebrow="Configurações" title="Tema, perfil e rotina" subtitle="Ajustes rápidos, com tudo salvo localmente no navegador." />
       </GlassCard>
       <section className="grid gap-4 xl:grid-cols-1">
         <GlassCard className="p-4">
-          <SectionHeader eyebrow="Perfil" title="Editar perfil e rotina" subtitle="Atualize nome, agenda, duração de estudo, meta, nível e tema." />
+          <SectionHeader eyebrow="Perfil" title="Editar perfil e rotina" subtitle="Atualize nome, agenda, duração de estudo e tema." />
           <div className="mt-4 grid gap-3">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Como você deseja ser chamado</p>
             <input className="input-shell w-full" value={profileName || ''} onChange={(event) => setProfileName(event.target.value)} placeholder="Seu nome" />
@@ -84,6 +93,20 @@ export default function SettingsPage() {
               ))}
             </div>
 
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quais dias serão exclusivos para revisão?</p>
+            <div className="flex flex-wrap gap-2">
+              {weekdays.map((day) => (
+                <button
+                  key={day.id}
+                  type="button"
+                  onClick={() => toggleReviewDay(day.id)}
+                  className={`app-button-secondary ${reviewDays.includes(day.id) ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
+                >
+                  {day.label}
+                </button>
+              ))}
+            </div>
+
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Por quanto tempo você deseja estudar?</p>
             <div className="flex flex-wrap gap-2">
               {studyTimeOptions.map((option) => (
@@ -97,8 +120,6 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
-
-            {/* removed: target score and level selectors per user request */}
 
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Quando você quer começar a estudar?</p>
             <input className="input-shell w-full" type="date" value={studyStartDate} onChange={(event) => setStudyStartDate(event.target.value)} />

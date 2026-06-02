@@ -37,6 +37,26 @@ function StudyItemCard({ item, onStatus }) {
   );
 }
 
+function ReviewItemCard({ item, onResult }) {
+  return (
+    <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{item.subjectLabel}</p>
+          <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{item.front}</strong>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Resposta: {item.back}</p>
+        </div>
+        <StatusBadge status={item.status === 'due' ? 'pending' : 'done'}>{item.status === 'due' ? 'revisar' : 'agendado'}</StatusBadge>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => onResult(item, 'correct')} className="app-button-primary w-full text-xs">Acertei</button>
+        <button type="button" onClick={() => onResult(item, 'incorrect')} className="app-button-secondary w-full text-xs">Errei</button>
+      </div>
+    </div>
+  );
+}
+
 // OverdueCard removed (unused)
 
 function ReminderCard({ item }) {
@@ -54,9 +74,10 @@ function ReminderCard({ item }) {
 }
 
 export default function HomePage() {
-  const { dashboard, actions, state } = usePlanner();
+  const { dashboard, actions, state, schedule } = usePlanner();
   const [showMore] = useState(false);
   const displayName = state.settings.profileName?.trim() || 'Seu nome';
+  const today = new Date().toISOString().slice(0, 10);
 
   function getGreeting() {
     const hour = new Date().getHours();
@@ -66,9 +87,17 @@ export default function HomePage() {
   }
 
   const reminders = dashboard.reminders.slice(0, 3);
-  const todayItems = dashboard.todayStudyItems.slice(0, 4);
+  const todayItems = dashboard.todayReviewDay ? dashboard.todayReviewItems.slice(0, 4) : dashboard.todayStudyItems.slice(0, 4);
   const motivation = dashboard.motivations[0];
-  const hasMoreToday = dashboard.todayStudyItems.length > todayItems.length;
+  const hasMoreToday = dashboard.todayReviewDay ? dashboard.todayReviewItems.length > todayItems.length : dashboard.todayStudyItems.length > todayItems.length;
+  const nextActiveDay = schedule.weeks.flatMap((week) => week.days).find((day) => day.date > today && (day.type === 'study' || day.type === 'review'));
+  const nextStudyMessage = dashboard.todayReviewDay
+    ? 'Hoje é dia de revisar.'
+    : dashboard.todayStudyItems.length > 0
+      ? 'Hoje é dia de estudar.'
+    : nextActiveDay
+      ? `Faltam ${Math.max(1, Math.round((new Date(`${nextActiveDay.date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000))} dias para seu próximo estudo.`
+      : 'Seu próximo estudo já está perto.';
 
   return (
     <div className="grid gap-4 pb-6">
@@ -78,10 +107,10 @@ export default function HomePage() {
             <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--muted)]">{getGreeting()}, {displayName}</p>
             <h1 className="max-w-xl text-3xl font-black tracking-tight text-[var(--text)] sm:text-4xl">Seu assistente de estudos do ENEM</h1>
             <div className="flex flex-wrap gap-2">
-              <StatusBadge status="simulado">🔥 {dashboard.streak} dias seguidos</StatusBadge>
               <StatusBadge status="done">{dashboard.completion}% concluído</StatusBadge>
               <StatusBadge status={dashboard.daysUntilEnem > 30 ? 'pending' : 'simulado'}>{dashboard.daysUntilEnem} dias ENEM</StatusBadge>
             </div>
+            <p className="max-w-2xl text-base font-semibold text-[var(--muted)]">{nextStudyMessage}</p>
           </div>
 
           <div className="min-w-[110px] rounded-[26px] border border-[var(--border)] bg-white/5 p-4 text-center">
@@ -103,25 +132,27 @@ export default function HomePage() {
         </GlassCard>
 
         <GlassCard className="p-4 sm:p-5">
-          <SectionHeader eyebrow="Estudos de hoje" title="Conteúdos programados" />
+          <SectionHeader eyebrow={dashboard.todayReviewDay ? 'Revisão de hoje' : 'Estudos de hoje'} title={dashboard.todayReviewDay ? 'Flashcards e revisão espaçada' : 'Conteúdos programados'} />
           <div className="mt-4 grid gap-3">
             {todayItems.length === 0 ? (
-              <EmptyState title="Sem estudos para hoje" subtitle="Seu cronograma não tem novos itens programados para hoje." />
-            ) : todayItems.map((item) => <StudyItemCard key={item.id} item={item} onStatus={actions.setContentStatus} />)}
+              <EmptyState title={dashboard.todayReviewDay ? 'Sem flashcards para hoje' : 'Sem estudos para hoje'} subtitle={dashboard.todayReviewDay ? 'Ainda não há cartões liberados para a revisão de hoje.' : 'Seu cronograma não tem novos itens programados para hoje.'} />
+            ) : dashboard.todayReviewDay ? (
+              todayItems.map((item) => <ReviewItemCard key={item.id} item={item} onResult={actions.recordFlashcardResult} />)
+            ) : (
+              todayItems.map((item) => <StudyItemCard key={item.id} item={item} onStatus={actions.setContentStatus} />)
+            )}
           </div>
-          {hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {dashboard.todayStudyItems.length - todayItems.length} itens também estão programados para hoje.</p> : null}
+          {hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {(dashboard.todayReviewDay ? dashboard.todayReviewItems.length : dashboard.todayStudyItems.length) - todayItems.length} itens também estão programados para hoje.</p> : null}
         </GlassCard>
       </section>
 
       <GlassCard className="p-4 sm:p-5">
         <SectionHeader eyebrow="Progresso" title="Painel de evolução" />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile label="Concluído" value={`${dashboard.completion}%`} caption={`${dashboard.completed}/${dashboard.total}`} tone="brand" />
           <StatTile label="Estudados" value={dashboard.completed} caption="conteúdos finalizados" tone="good" />
           <StatTile label="Pendentes" value={dashboard.pending} caption="aguardando estudo" tone="warn" />
-          <StatTile label="Perdidos" value={dashboard.lost} caption="na recuperação" tone="bad" />
-          <StatTile label="Sequência" value={`${dashboard.streak} dias`} caption="dias seguidos" tone="brand" />
-          <StatTile label="Horas" value={`${dashboard.hoursAccumulated}h`} caption="acumuladas no foco" tone="good" />
+          <StatTile label="Perdidos" value={dashboard.lost} caption="a revisar" tone="bad" />
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-[1.4fr_0.6fr]">
           <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
@@ -133,6 +164,7 @@ export default function HomePage() {
           <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Motivação</p>
             <p className="mt-2 text-base font-black tracking-tight text-[var(--text)]">{motivation}</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Próximo dia de estudo: {nextActiveDay ? nextActiveDay.weekday : 'sem data'}.</p>
           </div>
         </div>
       </GlassCard>

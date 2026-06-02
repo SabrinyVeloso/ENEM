@@ -8,6 +8,7 @@ import {
   getDaysUntilEnem,
   repertoires,
   buildAdaptiveSchedule,
+  buildFlashcardDeck,
   scheduleStart,
   priorityMeta,
   settingsDefaults,
@@ -41,6 +42,9 @@ function createDefaultState() {
     contentStatuses: {},
     reviewQueue: [],
     reviewSchedule: {},
+    flashcardProgress: {},
+    flashcardHistory: [],
+    watchedVideos: {},
     focusMode: false,
     essayDraft: { topic: '', text: '' },
     essays: [],
@@ -60,6 +64,9 @@ function mergeState(base, incoming) {
   );
   next.reviewQueue = Array.isArray(incoming.reviewQueue) ? incoming.reviewQueue : [];
   next.reviewSchedule = { ...(incoming.reviewSchedule || {}) };
+  next.flashcardProgress = { ...(incoming.flashcardProgress || {}) };
+  next.flashcardHistory = Array.isArray(incoming.flashcardHistory) ? incoming.flashcardHistory : [];
+  next.watchedVideos = { ...(incoming.watchedVideos || {}) };
   next.focusMode = Boolean(incoming.focusMode);
   next.essayDraft = { ...next.essayDraft, ...(incoming.essayDraft || {}) };
   next.essays = Array.isArray(incoming.essays) ? incoming.essays : [];
@@ -205,23 +212,37 @@ function buildCurrentStreak(state, scheduleData) {
   return streak;
 }
 
-function buildRecoveryItems(state, scheduleData) {
-  const today = getTodayISO();
-  return getContentItems(scheduleData)
-    .filter((item) => getContentStatus(state, item.id) === 'perdido')
-    .map((item) => {
-      const dueDate = state.reviewSchedule?.[item.id] || getNextStudyDate(state.settings);
-      return {
-        ...item,
-        dueDate,
-        queued: Array.isArray(state.reviewQueue) && state.reviewQueue.includes(item.id),
-        isDue: dueDate <= today
-      };
-    })
-    .sort((a, b) => {
-      if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
-      return a.dueDate.localeCompare(b.dueDate);
-    });
+function buildFlashcardAnalytics(state, scheduleData) {
+  const deck = buildFlashcardDeck(state, scheduleData, 50);
+  const history = Array.isArray(state.flashcardHistory) ? state.flashcardHistory : [];
+  const correct = history.filter((entry) => entry.result === 'correct').length;
+  const incorrect = history.filter((entry) => entry.result === 'incorrect').length;
+  const total = correct + incorrect;
+  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const streak = deck.cards.reduce((acc, card) => Math.max(acc, card.streak || 0), 0);
+  const weeklyHistory = history.filter((entry) => {
+    if (!entry.createdAt) return false;
+    const createdAt = new Date(entry.createdAt);
+    const diffDays = Math.floor((new Date() - createdAt) / 86400000);
+    return diffDays >= 0 && diffDays < 7;
+  });
+  const monthlyHistory = history.filter((entry) => {
+    if (!entry.createdAt) return false;
+    return entry.createdAt.startsWith(new Date().toISOString().slice(0, 7));
+  });
+
+  return {
+    deck,
+    correct,
+    incorrect,
+    total,
+    accuracy,
+    streak,
+    weekly: weeklyHistory,
+    monthly: monthlyHistory,
+    subjectCounts: deck.subjectCounts,
+    dueCount: deck.dueCards.length
+  };
 }
 
 function getItemDueDate(state, item) {
@@ -297,6 +318,7 @@ function buildDashboard(state, scheduleData) {
   const pending = allItems.length - completed - lost;
   const currentWeek = getCurrentWeek(scheduleData);
   const currentDay = getCurrentDay(scheduleData);
+  const flashcardAnalytics = buildFlashcardAnalytics(state, scheduleData);
   const currentWeekStudyDays = currentWeek.days.filter((day) => day.type === 'study');
   const currentWeekDone = currentWeekStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const currentWeekProgress = Math.round((currentWeekDone / currentWeekStudyDays.length) * 100) || 0;
@@ -311,14 +333,14 @@ function buildDashboard(state, scheduleData) {
   const streak = buildCurrentStreak(state, scheduleData);
   const today = toISODate(new Date());
   const todayStudyItems = buildTodayStudyItems(state, scheduleData);
+  const todayReviewDay = currentDay?.type === 'review';
+  const todayReviewItems = todayReviewDay ? flashcardAnalytics.deck.dueCards.slice(0, 12) : [];
   const overdueItems = buildOverdueItems(state, scheduleData);
   const reviewItems = allItems
     .filter((item) => getContentStatus(state, item.id) === 'perdido')
     .filter((item) => !state.reviewSchedule?.[item.id] || state.reviewSchedule[item.id] <= today)
     .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
-  const recoveryItems = buildRecoveryItems(state, scheduleData);
-  const dueRecoveryItems = recoveryItems.filter((item) => item.isDue);
-  const nextReviewItem = [...overdueItems, ...recoveryItems].sort((a, b) => {
+  const nextReviewItem = [...overdueItems, ...flashcardAnalytics.deck.dueCards].sort((a, b) => {
     if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
     return a.dueDate.localeCompare(b.dueDate);
   })[0] || null;
@@ -386,14 +408,23 @@ function buildDashboard(state, scheduleData) {
     focusMinutes: state.focusHistory.reduce((acc, item) => acc + item.minutes, 0),
     reviewItems,
     todayStudyItems,
+    todayReviewDay,
+    todayReviewItems,
     overdueItems,
     reminders,
     nextReview,
     motivations,
-    recoveryItems,
-    dueRecoveryItems,
-    recoveryCount: recoveryItems.length,
-    dueRecoveryCount: dueRecoveryItems.length,
+    reviewDeck: flashcardAnalytics.deck.cards,
+    reviewDeckSize: flashcardAnalytics.deck.totalCards,
+    reviewDueCount: flashcardAnalytics.dueCount,
+    flashcardCorrect: flashcardAnalytics.correct,
+    flashcardIncorrect: flashcardAnalytics.incorrect,
+    flashcardAnswered: flashcardAnalytics.total,
+    flashcardAccuracy: flashcardAnalytics.accuracy,
+    flashcardStreak: flashcardAnalytics.streak,
+    flashcardWeeklyHistory: flashcardAnalytics.weekly,
+    flashcardMonthlyHistory: flashcardAnalytics.monthly,
+    flashcardSubjectCounts: flashcardAnalytics.subjectCounts,
     essayCount: state.essays.length,
     questionCount: state.exerciseHistory.length,
     simuladoCount: state.simuladoHistory.length
@@ -439,6 +470,10 @@ export function PlannerProvider({ children }) {
     // Apply CSS variables globally
     try {
       const root = document.documentElement;
+      root.style.setProperty('--bg', merged.bg);
+      root.style.setProperty('--surface', merged.surface);
+      root.style.setProperty('--surface-alt', merged.surfaceAlt);
+      root.style.setProperty('--text', merged.text);
       root.style.setProperty('--primary', merged.primary);
       root.style.setProperty('--primary-50', merged[50] || merged.primary);
       root.style.setProperty('--primary-100', merged[100] || merged.primary);
@@ -542,6 +577,54 @@ export function PlannerProvider({ children }) {
           };
         });
       },
+      recordFlashcardResult(card, result) {
+        if (!card?.id) return;
+        const isCorrect = result === 'correct';
+        setState((current) => {
+          const progress = current.flashcardProgress || {};
+          const previous = progress[card.id] || {};
+          const previousCorrect = Number(previous.correct || 0);
+          const previousIncorrect = Number(previous.incorrect || 0);
+          const previousInterval = Number(previous.intervalDays || 1);
+          const previousEase = Number(previous.ease || 2.2);
+          const nextInterval = isCorrect
+            ? Math.min(30, Math.max(1, Math.round(previousInterval * (previousEase + 0.1))))
+            : 1;
+          const nextEase = isCorrect
+            ? Math.min(3, previousEase + 0.1)
+            : Math.max(1.3, previousEase - 0.2);
+          const nextProgress = {
+            correct: previousCorrect + (isCorrect ? 1 : 0),
+            incorrect: previousIncorrect + (isCorrect ? 0 : 1),
+            streak: isCorrect ? Number(previous.streak || 0) + 1 : 0,
+            intervalDays: nextInterval,
+            ease: nextEase,
+            nextDueAt: toISODate(addDays(new Date(), nextInterval)),
+            lastResult: isCorrect ? 'correct' : 'incorrect',
+            lastReviewedAt: new Date().toISOString()
+          };
+
+          return {
+            ...current,
+            flashcardProgress: {
+              ...progress,
+              [card.id]: nextProgress
+            },
+            flashcardHistory: [
+              {
+                id: `flashcard-${Date.now()}`,
+                createdAt: new Date().toISOString(),
+                cardId: card.id,
+                contentId: card.contentId,
+                subject: card.subject,
+                result: isCorrect ? 'correct' : 'incorrect',
+                sourceTitle: card.sourceTitle
+              },
+              ...(current.flashcardHistory || [])
+            ]
+          };
+        });
+      },
       saveEssay(draft) {
         setState((current) => ({
           ...current,
@@ -583,6 +666,16 @@ export function PlannerProvider({ children }) {
             { id: `focus-${Date.now()}`, createdAt: new Date().toISOString(), ...entry },
             ...current.focusHistory
           ]
+        }));
+      },
+      toggleVideoWatched(videoId) {
+        if (!videoId) return;
+        setState((current) => ({
+          ...current,
+          watchedVideos: {
+            ...(current.watchedVideos || {}),
+            [videoId]: !current.watchedVideos?.[videoId]
+          }
         }));
       },
       updateSettings(settings) {
@@ -668,14 +761,23 @@ export function PlannerProvider({ children }) {
         focusMinutes: 0,
         reviewItems: [],
         todayStudyItems: [],
+        todayReviewDay: false,
+        todayReviewItems: [],
         overdueItems: [],
         reminders: [],
         nextReview: { date: null, label: 'Sem revisão agendada', title: 'Sem revisão' },
         motivations: [],
-        recoveryItems: [],
-        dueRecoveryItems: [],
-        recoveryCount: 0,
-        dueRecoveryCount: 0,
+        reviewDeck: [],
+        reviewDeckSize: 0,
+        reviewDueCount: 0,
+        flashcardCorrect: 0,
+        flashcardIncorrect: 0,
+        flashcardAnswered: 0,
+        flashcardAccuracy: 0,
+        flashcardStreak: 0,
+        flashcardWeeklyHistory: [],
+        flashcardMonthlyHistory: [],
+        flashcardSubjectCounts: {},
         essayCount: state.essays.length,
         questionCount: state.exerciseHistory.length,
         simuladoCount: state.simuladoHistory.length
@@ -700,7 +802,13 @@ export function PlannerProvider({ children }) {
         essayTopics,
         repertoires,
         connectors,
-        themePalette: themePalettes[state.theme],
+        themePalette: (() => {
+          const mode = state.settings?.themeMode || state.theme || 'dark';
+          const accent = state.settings?.accentColor || 'blue';
+          const base = themePalettes[mode] || themePalettes.dark;
+          const accentDef = accentColors[accent] || accentColors.blue;
+          return { ...base, ...accentDef };
+        })(),
         subjectMeta,
         schedule: adaptiveSchedule,
         scheduleStart,

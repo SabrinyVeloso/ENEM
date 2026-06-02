@@ -8,6 +8,7 @@ export default function Onboarding() {
   const [hoursPerDay, setHoursPerDay] = useState(90);
   const [studyStartDate, setStudyStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [studyDays, setStudyDays] = useState(['mon', 'tue', 'wed', 'thu', 'fri']);
+  const [reviewDays, setReviewDays] = useState(['sun']);
 
 
   const studyTimeOptions = [
@@ -29,6 +30,7 @@ export default function Onboarding() {
     const settings = {
       studyDaysCount: Array.isArray(studyDays) ? studyDays.length : 0,
       studyDays: Array.isArray(studyDays) ? studyDays : [],
+      reviewDays: Array.isArray(reviewDays) ? reviewDays : [],
       studyHoursPerDay: Number(hoursPerDay),
       studyStartDate,
       onboardCompleted: true
@@ -69,6 +71,23 @@ export default function Onboarding() {
                   );
                 })}
               </div>
+
+                <p className="text-sm text-[var(--muted)]">Quais dias serão exclusivos para revisão?</p>
+                <div className="flex gap-2 flex-wrap">
+                  {[['sun', 'Dom'], ['mon', 'Seg'], ['tue', 'Ter'], ['wed', 'Qua'], ['thu', 'Qui'], ['fri', 'Sex'], ['sat', 'Sáb']].map(([key, label]) => {
+                    const active = reviewDays.includes(key);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setReviewDays((prev) => (prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]))}
+                        className={`app-button-secondary ${active ? 'bg-[linear-gradient(135deg,var(--primary),var(--accent))] text-white' : ''}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
 
               <p className="text-sm text-[var(--muted)]">Por quanto tempo você deseja estudar?</p>
               <div className="flex gap-2 flex-wrap">

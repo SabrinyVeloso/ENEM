@@ -567,6 +567,7 @@ export const settingsDefaults = {
   studyStartDate: scheduleStart,
   studyDaysCount: 5,
   studyDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  reviewDays: ['sun'],
   studyHoursPerDay: 90,
   targetScore: '700+',
   level: 'Intermediário',
@@ -602,6 +603,10 @@ export function getDaysUntilEnem(today = new Date()) {
   return Math.max(0, Math.ceil((target - startOfToday) / 86400000));
 }
 
+function getTodayISO() {
+  return toISODate(new Date());
+}
+
 function makeTopicSummary(topic) {
   const priority = priorityMeta[topic.priority] || priorityMeta.medium;
   return {
@@ -609,6 +614,30 @@ function makeTopicSummary(topic) {
     priorityLabel: priority.label,
     priorityRank: priority.rank
   };
+}
+
+function getContentItems(scheduleData) {
+  return scheduleData?.items || [];
+}
+
+function getContentStatus(state, contentId) {
+  return state?.contentStatuses?.[contentId] || 'pending';
+}
+
+function getCurrentWeekData(scheduleData, referenceDate = new Date()) {
+  const today = toISODate(referenceDate);
+  return scheduleData?.weeks?.find((week) => week.days.some((day) => day.date === today)) || scheduleData?.weeks?.[0] || null;
+}
+
+function getWeeklyFlashcardSources(state = {}, scheduleData = buildAdaptiveSchedule(state.settings || {})) {
+  const contentItems = getContentItems(scheduleData);
+  const currentWeek = getCurrentWeekData(scheduleData);
+  const weekStudyItems = (currentWeek?.days || [])
+    .filter((day) => day.type === 'study' && day.contentId)
+    .map((day) => contentItems.find((item) => item.id === day.contentId))
+    .filter(Boolean);
+  const completedItems = weekStudyItems.filter((item) => getContentStatus(state, item.id) === 'done');
+  return completedItems.length > 0 ? completedItems : weekStudyItems;
 }
 
 function pickWeeklyTopic(list, weekIndex) {
@@ -684,7 +713,7 @@ export function buildSchedule() {
         subject: null,
         subjectLabel: 'Descanso',
         title: 'Descanso ativo',
-        description: 'Recuperação e revisão leve.',
+        description: 'Revisão leve e retomada de pontos importantes.',
         contentId: null
       },
       {
@@ -730,7 +759,7 @@ export function buildSchedule() {
         subject: weekIndex % 2 === 0 ? 'simulado' : null,
         subjectLabel: weekIndex % 2 === 0 ? 'Simulado' : 'Descanso',
         title: weekIndex % 2 === 0 ? 'Simulado completo' : 'Descanso ou revisão livre',
-        description: weekIndex % 2 === 0 ? 'Treino cronometrado da semana.' : 'Uso livre para recuperação mental.',
+        description: weekIndex % 2 === 0 ? 'Treino cronometrado da semana.' : 'Uso livre para revisão leve e descanso mental.',
         contentId: null
       }
     ];
@@ -751,6 +780,123 @@ export function buildSchedule() {
   });
 
   return { weeks, items };
+}
+
+function buildFlashcardPrompt(item, variantIndex) {
+  const title = item.title.toLowerCase();
+  const description = item.description;
+  const promptSets = {
+    math: [
+      { front: `O que é ${title}?`, back: description },
+      { front: `Como lembrar ${title}?`, back: `Associe com ${description.toLowerCase()}.` }
+    ],
+    language: [
+      { front: `O que é ${title}?`, back: description },
+      { front: `Como ${title} ajuda na prova?`, back: 'Ele reforça leitura, sentido e análise de texto no ENEM.' }
+    ],
+    humanas: [
+      { front: `O que estuda ${title}?`, back: description },
+      { front: `Por que ${title} é importante?`, back: 'Porque ajuda a interpretar sociedade, território e relações de poder.' }
+    ],
+    nature: [
+      { front: `O que é ${title}?`, back: description },
+      { front: `Como ${title} aparece no cotidiano?`, back: 'Ele se conecta com saúde, ambiente, tecnologia e fenômenos observáveis.' }
+    ],
+    essay: [
+      { front: `Qual é a função de ${title}?`, back: description },
+      { front: `Como usar ${title} na redação?`, back: 'Use isso para organizar tese, argumentação e fechamento textual.' }
+    ]
+  };
+
+  const options = promptSets[item.subject] || promptSets.math;
+  return options[variantIndex % options.length];
+}
+
+function buildBalancedStudySelection(studiedItems, limit) {
+  const subjectBuckets = studyOrder.reduce((acc, subject) => {
+    acc[subject] = studiedItems.filter((item) => item.subject === subject);
+    return acc;
+  }, {});
+  const selection = [];
+  const maxItems = Math.max(1, Math.ceil(limit / 2));
+  let cursor = 0;
+  let pushed = false;
+
+  do {
+    pushed = false;
+    studyOrder.forEach((subject) => {
+      const item = subjectBuckets[subject][cursor];
+      if (item && selection.length < maxItems) {
+        selection.push(item);
+        pushed = true;
+      }
+    });
+    cursor += 1;
+  } while (pushed && selection.length < maxItems);
+
+  return selection;
+}
+
+export function buildFlashcardDeck(state = {}, scheduleData = buildAdaptiveSchedule(state.settings || {}), limit = 50) {
+  const today = getTodayISO();
+  const studiedItems = (getWeeklyFlashcardSources(state, scheduleData).length > 0
+    ? getWeeklyFlashcardSources(state, scheduleData)
+    : getContentItems(scheduleData).filter((item) => getContentStatus(state, item.id) === 'done'))
+    .sort((a, b) => {
+      if (a.scheduledFor === b.scheduledFor) return (b.priorityRank || 0) - (a.priorityRank || 0);
+      return (b.scheduledFor || '').localeCompare(a.scheduledFor || '');
+    });
+  const selectedItems = buildBalancedStudySelection(studiedItems, limit);
+  const progress = state.flashcardProgress || {};
+  const cards = [];
+
+  selectedItems.forEach((item) => {
+    [0, 1].forEach((variantIndex) => {
+      const cardId = `${item.id}-flash-${variantIndex + 1}`;
+      const progressEntry = progress[cardId] || {};
+      const prompt = buildFlashcardPrompt(item, variantIndex);
+      const correct = Number(progressEntry.correct || 0);
+      const incorrect = Number(progressEntry.incorrect || 0);
+      const dueDate = progressEntry.nextDueAt || today;
+      const weight = Math.max(1, 3 + incorrect - correct);
+
+      cards.push({
+        id: cardId,
+        contentId: item.id,
+        subject: item.subject,
+        subjectLabel: item.subjectLabel,
+        sourceTitle: item.title,
+        front: prompt.front,
+        back: prompt.back,
+        dueDate,
+        correct,
+        incorrect,
+        streak: Number(progressEntry.streak || 0),
+        intervalDays: Number(progressEntry.intervalDays || 1),
+        ease: Number(progressEntry.ease || 2.2),
+        weight,
+        lastResult: progressEntry.lastResult || null,
+        lastReviewedAt: progressEntry.lastReviewedAt || null,
+        status: dueDate <= today ? 'due' : 'scheduled'
+      });
+    });
+  });
+
+  const sorted = cards.sort((a, b) => {
+    if (a.dueDate === b.dueDate) return b.weight - a.weight;
+    return a.dueDate.localeCompare(b.dueDate);
+  });
+
+  return {
+    cards: sorted.slice(0, limit),
+    studiedItems: selectedItems,
+    totalCards: sorted.length,
+    dueCards: sorted.filter((card) => card.status === 'due'),
+    subjectCounts: selectedItems.reduce((acc, item) => {
+      acc[item.subject] = (acc[item.subject] || 0) + 2;
+      return acc;
+    }, {})
+  };
 }
 
 export const schedule = buildSchedule();
@@ -792,6 +938,11 @@ function normalizeStudyDays(studyDays = []) {
   return ['mon', 'tue', 'wed', 'thu', 'fri'];
 }
 
+function normalizeReviewDays(reviewDays = [], studyDays = []) {
+  const filtered = reviewDays.filter((day) => weekdayOrder.includes(day) && !studyDays.includes(day));
+  return filtered.length > 0 ? filtered : ['sun'];
+}
+
 function buildBalancedTopicQueue() {
   const subjectOrder = studyOrder;
   const subjectBuckets = Object.fromEntries(subjectOrder.map((subject) => [subject, curriculum[subject].map((topic, index) => ({ ...topic, subject, index }))]));
@@ -824,6 +975,8 @@ export function buildAdaptiveSchedule(settings = {}) {
   const start = fromISODate(settings.studyStartDate || scheduleStart);
   const end = fromISODate(enemDate);
   const studyDays = normalizeStudyDays(settings.studyDays || []);
+  const reviewDays = normalizeReviewDays(settings.reviewDays || [], studyDays);
+  const activeStudyDays = studyDays.filter((day) => !reviewDays.includes(day));
   const studyMinutes = Number(settings.studyHoursPerDay || settings.studyMinutes || 90);
   const topicQueue = buildBalancedTopicQueue();
   const totalDays = Math.max(1, Math.ceil((end - start) / 86400000) + 1);
@@ -832,7 +985,7 @@ export function buildAdaptiveSchedule(settings = {}) {
   for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
     const day = addDays(start, dayIndex);
     const weekdayKey = weekdayOrder[day.getDay()];
-    if (studyDays.includes(weekdayKey)) totalStudyDays += 1;
+    if (activeStudyDays.includes(weekdayKey)) totalStudyDays += 1;
   }
 
   const topicsPerSession = calculateTopicsPerSession(topicQueue.length, totalStudyDays, studyMinutes);
@@ -843,12 +996,25 @@ export function buildAdaptiveSchedule(settings = {}) {
   for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
     const currentDate = addDays(start, dayIndex);
     const weekdayKey = weekdayOrder[currentDate.getDay()];
-    const isStudyDay = studyDays.includes(weekdayKey);
+    const isReviewDay = reviewDays.includes(weekdayKey);
+    const isStudyDay = activeStudyDays.includes(weekdayKey);
     const weekNumber = Math.floor(dayIndex / 7) + 1;
     const weekBucket = weeks[weekNumber - 1] || { weekNumber, start: toISODate(addDays(start, (weekNumber - 1) * 7)), days: [] };
 
     let dayEntry;
-    if (isStudyDay && queueIndex < topicQueue.length) {
+    if (isReviewDay) {
+      dayEntry = {
+        date: toISODate(currentDate),
+        weekday: weekdayLabelByKey[weekdayKey],
+        type: 'review',
+        subject: 'review',
+        subjectLabel: 'Revisão',
+        title: 'Revisão exclusiva',
+        description: 'Flashcards, resumos e exercícios de revisão sem conteúdo novo.',
+        contentId: null,
+        blocks: ['Flashcards', 'Resumo', 'Exercícios']
+      };
+    } else if (isStudyDay && queueIndex < topicQueue.length) {
       const assignedTopics = topicQueue.slice(queueIndex, queueIndex + topicsPerSession);
       queueIndex += assignedTopics.length;
       const primary = assignedTopics[0];
@@ -895,7 +1061,7 @@ export function buildAdaptiveSchedule(settings = {}) {
         subject: null,
         subjectLabel: 'Descanso',
         title: 'Descanso ativo',
-        description: 'Recuperação e revisão leve.',
+        description: 'Revisão leve e retomada de pontos importantes.',
         contentId: null
       };
     }

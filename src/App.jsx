@@ -3,9 +3,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import HomePage from './pages/HomePage';
 import ContentsPage from './pages/ContentsPage';
-import RecoveryPage from './pages/RecoveryPage';
 import EssayPage from './pages/EssayPage';
 import SimuladosPage from './pages/SimuladosPage';
+import RevisaoPage from './pages/RevisaoPage';
 import VideoaulasPage from './pages/VideoaulasPage';
 import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -16,8 +16,9 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<HomePage />} />
-        <Route path="conteudos" element={<ContentsPage />} />
-        <Route path="recuperacao" element={<RecoveryPage />} />
+        <Route path="cronograma" element={<ContentsPage />} />
+        <Route path="conteudos" element={<Navigate to="/cronograma" replace />} />
+        <Route path="revisao" element={<RevisaoPage />} />
         <Route path="redacao" element={<EssayPage />} />
         <Route path="exercicios" element={<Navigate to="/" replace />} />
         <Route path="simulados" element={<SimuladosPage />} />
