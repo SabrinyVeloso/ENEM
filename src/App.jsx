@@ -6,6 +6,7 @@ import ContentsPage from './pages/ContentsPage';
 import EssayPage from './pages/EssayPage';
 import SimuladosPage from './pages/SimuladosPage';
 import RevisaoPage from './pages/RevisaoPage';
+import FlashcardsPage from './pages/FlashcardsPage';
 import VideoaulasPage from './pages/VideoaulasPage';
 import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="configuracoes" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
+      <Route path="revisao/estudar" element={<FlashcardsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

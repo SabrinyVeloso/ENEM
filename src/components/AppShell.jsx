@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
 import { BookIcon, ChartIcon, HomeIcon, SettingsIcon, SparkIcon, VideoIcon } from './Icons';
@@ -33,6 +33,8 @@ export function AppShell() {
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mobileHeaderHidden, setMobileHeaderHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
   const todayISO = new Date().toISOString().slice(0, 10);
   const nextActiveDay = (schedule.weeks || []).flatMap((week) => week.days).find((day) => day.date > todayISO && (day.type === 'study' || day.type === 'review'));
 
@@ -52,6 +54,34 @@ export function AppShell() {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+      if (!isMobile) {
+        setMobileHeaderHidden(false);
+        return;
+      }
+
+      const currentY = window.scrollY || 0;
+      const previousY = lastScrollYRef.current;
+      const delta = currentY - previousY;
+
+      if (currentY < 24) {
+        setMobileHeaderHidden(false);
+      } else if (delta > 7 && currentY > 92) {
+        setMobileHeaderHidden(true);
+      } else if (delta < -7) {
+        setMobileHeaderHidden(false);
+      }
+
+      lastScrollYRef.current = currentY;
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
@@ -147,20 +177,22 @@ export function AppShell() {
 
         <div className={`flex min-h-screen w-full flex-1 flex-col ${state.focusMode ? 'lg:pl-0' : 'lg:pl-[352px]'}`}>
           <header
-            className="sticky top-0 z-30 border-b border-[var(--border)] px-5 py-4 backdrop-blur-2xl lg:px-8 lg:py-5 safe-top"
+            className={`mobile-app-header sticky top-0 z-30 border-b border-[var(--border)] px-4 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-2xl transition-[transform,opacity,box-shadow] duration-300 ease-out lg:px-8 lg:py-5 ${
+              mobileHeaderHidden ? '-translate-y-full opacity-0 shadow-none lg:translate-y-0 lg:opacity-100' : 'translate-y-0 opacity-100'
+            }`}
             style={{ backgroundColor: (state.settings?.themeMode || state.theme) === 'dark' ? 'rgba(5, 8, 20, 0.72)' : 'rgba(243, 246, 249, 0.88)' }}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[12px] font-black uppercase tracking-[0.32em] text-[var(--muted)]">ENEM Planner</p>
-                <p className="mt-1 truncate text-[15px] font-semibold text-[var(--text)] sm:text-base">
+            <div className="flex min-h-[68px] items-center justify-between gap-4 lg:min-h-0">
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--muted)] sm:text-[12px]">ENEM Planner</p>
+                <p className="mx-auto mt-1 max-w-[24rem] text-balance text-[15px] font-extrabold leading-6 text-[var(--text)] sm:mx-0 sm:text-base">
                   {dashboard.todayReviewDay ? 'Hoje é dia de revisão.' : dashboard.todayStudyItems.length > 0 ? 'Hoje é dia de estudar.' : nextActiveDay ? `Faltam ${Math.max(1, Math.round((new Date(`${nextActiveDay.date}T00:00:00`) - new Date(`${todayISO}T00:00:00`)) / 86400000))} dias para o próximo estudo.` : 'Seu próximo estudo está definido.'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-12 items-center gap-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.08)] px-5 text-[15px] font-black text-[var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.1)] text-[15px] font-black text-[var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:w-auto sm:px-5"
                 aria-label="Abrir configurações"
               >
                 <SettingsIcon className="h-5 w-5" />
