@@ -9,6 +9,7 @@ import {
   repertoires,
   buildAdaptiveSchedule,
   buildFlashcardDeck,
+  
   scheduleStart,
   priorityMeta,
   settingsDefaults,
@@ -214,9 +215,9 @@ function buildCurrentStreak(state, scheduleData) {
 
 function buildFlashcardAnalytics(state, scheduleData) {
 const deck = buildFlashcardDeck(
-  state,
-  scheduleData,
-  30
+  
+ 
+  
 );
   console.log('FLASHCARDS', deck);
   const history = Array.isArray(state.flashcardHistory) ? state.flashcardHistory : [];

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePlanner } from '../context/PlannerContext';
 import { GlassCard } from '../components/Ui';
 
+
 export default function FlashcardsPage() {
   const { dashboard, actions } = usePlanner();
 
@@ -17,6 +18,7 @@ export default function FlashcardsPage() {
   const [incorrectCount, setIncorrectCount] = useState(0);
   
 const currentCard = deck[cardIndex];
+console.log('CURRENT CARD:', currentCard);
 
 if (correctCount + incorrectCount >= 30) {
   return (

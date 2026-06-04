@@ -11,7 +11,6 @@ import VideoaulasPage from './pages/VideoaulasPage';
 import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
-import FlashcardsPage from './pages/FlashcardsPage';
 
 export default function App() {
   return (
