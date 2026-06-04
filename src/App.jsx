@@ -10,6 +10,7 @@ import VideoaulasPage from './pages/VideoaulasPage';
 import StatsPage from './pages/StatsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import FlashcardsPage from './pages/FlashcardsPage';
 
 export default function App() {
   return (
@@ -26,8 +27,11 @@ export default function App() {
         <Route path="estatisticas" element={<StatsPage />} />
         <Route path="configuracoes" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
+        <Route path="flashcards" element={<FlashcardsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
+
     </Routes>
+
   );
 }

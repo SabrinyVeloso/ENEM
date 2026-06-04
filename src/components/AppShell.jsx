@@ -33,42 +33,119 @@ export function AppShell() {
   const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const [headerVisible, setHeaderVisible] = useState(true);
+const today = new Date();
+
+const todayISO = `${today.getFullYear()}-${String(
+  today.getMonth() + 1
+).padStart(2, '0')}-${String(
+  today.getDate()
+).padStart(2, '0')}`;
   const nextActiveDay = (schedule.weeks || []).flatMap((week) => week.days).find((day) => day.date > todayISO && (day.type === 'study' || day.type === 'review'));
 
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-    const handleBeforeInstallPrompt = (event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
+  const handleOnline = () => setOnline(true);
+  const handleOffline = () => setOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
-  }, []);
+  const handleBeforeInstallPrompt = (event) => {
+    event.preventDefault();
+    setInstallPrompt(event);
+  };
 
-  useEffect(() => {
-    const mode = state.settings?.themeMode || state.theme || 'dark';
-    document.documentElement.dataset.theme = mode;
-    document.documentElement.style.colorScheme = mode;
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener(
+    'beforeinstallprompt',
+    handleBeforeInstallPrompt
+  );
 
-    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) {
-      themeColorMeta.setAttribute('content', themePalette.bg);
+  return () => {
+    window.removeEventListener(
+      'online',
+      handleOnline
+    );
+    window.removeEventListener(
+      'offline',
+      handleOffline
+    );
+    window.removeEventListener(
+      'beforeinstallprompt',
+      handleBeforeInstallPrompt
+    );
+  };
+}, []);
+
+useEffect(() => {
+  const mode =
+    state.settings?.themeMode ||
+    state.theme ||
+    'dark';
+
+  document.documentElement.dataset.theme = mode;
+  document.documentElement.style.colorScheme = mode;
+
+  const themeColorMeta = document.querySelector(
+    'meta[name="theme-color"]'
+  );
+
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute(
+      'content',
+      themePalette.bg
+    );
+  }
+
+  const appleStatusBarMeta =
+    document.querySelector(
+      'meta[name="apple-mobile-web-app-status-bar-style"]'
+    );
+
+  if (appleStatusBarMeta) {
+    appleStatusBarMeta.setAttribute(
+      'content',
+      mode === 'dark'
+        ? 'black-translucent'
+        : 'default'
+    );
+  }
+}, [
+  state.settings?.themeMode,
+  state.settings?.accentColor,
+  state.theme,
+  themePalette.bg
+]);
+
+useEffect(() => {
+  let lastScroll = window.scrollY;
+
+  const handleScroll = () => {
+    const currentScroll = window.scrollY;
+
+    // Sempre mostra no topo da página
+    if (currentScroll < 20) {
+      setHeaderVisible(true);
+      return;
     }
 
-    const appleStatusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
-    if (appleStatusBarMeta) {
-      appleStatusBarMeta.setAttribute('content', mode === 'dark' ? 'black-translucent' : 'default');
+    // Esconde ao descer
+    if (currentScroll > lastScroll && currentScroll > 80) {
+      setHeaderVisible(false);
     }
-  }, [state.settings?.themeMode, state.settings?.accentColor, state.theme, themePalette.bg]);
+
+    // Mostra ao subir
+    if (currentScroll < lastScroll) {
+      setHeaderVisible(true);
+    }
+
+    lastScroll = currentScroll;
+  };
+
+  window.addEventListener('scroll', handleScroll);
+
+  return () => {
+    window.removeEventListener('scroll', handleScroll);
+  };
+}, []);
 
   async function handleInstallApp() {
     if (!installPrompt) return;
@@ -146,14 +223,45 @@ export function AppShell() {
         </aside>
 
         <div className={`flex min-h-screen w-full flex-1 flex-col ${state.focusMode ? 'lg:pl-0' : 'lg:pl-[352px]'}`}>
-          <header
-            className="sticky top-0 z-30 border-b border-[var(--border)] px-5 py-4 backdrop-blur-2xl lg:px-8 lg:py-5 safe-top"
-            style={{ backgroundColor: (state.settings?.themeMode || state.theme) === 'dark' ? 'rgba(5, 8, 20, 0.72)' : 'rgba(243, 246, 249, 0.88)' }}
-          >
+<header
+  className="
+    sticky
+    top-0
+    z-30
+    border-b
+    border-[var(--border)]
+    px-5
+    py-6
+    lg:px-8
+    lg:py-5
+    safe-top
+    backdrop-blur-2xl
+    transition-all
+    duration-300
+  "
+  style={{
+    transform: headerVisible
+      ? 'translateY(0)'
+      : 'translateY(-100%)',
+    opacity: headerVisible ? 1 : 0,
+    backgroundColor:
+      (state.settings?.themeMode || state.theme) === 'dark'
+        ? 'rgba(5, 8, 20, 0.82)'
+        : 'rgba(243, 246, 249, 0.95)'
+  }}
+>
+
+        
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[12px] font-black uppercase tracking-[0.32em] text-[var(--muted)]">ENEM Planner</p>
-                <p className="mt-1 truncate text-[15px] font-semibold text-[var(--text)] sm:text-base">
+                <p className="
+  mt-2
+  text-[18px]
+  font-bold
+  text-[var(--text)]
+  sm:text-base
+">
                   {dashboard.todayReviewDay ? 'Hoje é dia de revisão.' : dashboard.todayStudyItems.length > 0 ? 'Hoje é dia de estudar.' : nextActiveDay ? `Faltam ${Math.max(1, Math.round((new Date(`${nextActiveDay.date}T00:00:00`) - new Date(`${todayISO}T00:00:00`)) / 86400000))} dias para o próximo estudo.` : 'Seu próximo estudo está definido.'}
                 </p>
               </div>

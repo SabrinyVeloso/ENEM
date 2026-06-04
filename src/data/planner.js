@@ -838,6 +838,7 @@ function buildBalancedStudySelection(studiedItems, limit) {
 }
 
 export function buildFlashcardDeck(state = {}, scheduleData = buildAdaptiveSchedule(state.settings || {}), limit = 50) {
+ console.log('ENTROU EM buildFlashcardDeck');
   const today = getTodayISO();
   const studiedItems = (getWeeklyFlashcardSources(state, scheduleData).length > 0
     ? getWeeklyFlashcardSources(state, scheduleData)
@@ -846,10 +847,22 @@ export function buildFlashcardDeck(state = {}, scheduleData = buildAdaptiveSched
       if (a.scheduledFor === b.scheduledFor) return (b.priorityRank || 0) - (a.priorityRank || 0);
       return (b.scheduledFor || '').localeCompare(a.scheduledFor || '');
     });
-  const selectedItems = buildBalancedStudySelection(studiedItems, limit);
-  const progress = state.flashcardProgress || {};
-  const cards = [];
+ 
+ 
+ 
+const selectedItems = buildBalancedStudySelection(
+  studiedItems,
+  limit
+);
 
+console.log('Studied Items:', studiedItems.length);
+ console.log('Selected Items:', selectedItems.length);
+const progress = state.flashcardProgress || {};
+const cards = [];
+
+console.log('Cards:', cards);
+console.log('Schedule:', scheduleData);
+console.log('Hoje:', new Date().toISOString().slice(0, 10));
   selectedItems.forEach((item) => {
     [0, 1].forEach((variantIndex) => {
       const cardId = `${item.id}-flash-${variantIndex + 1}`;
@@ -883,9 +896,14 @@ export function buildFlashcardDeck(state = {}, scheduleData = buildAdaptiveSched
   });
 
   const sorted = cards.sort((a, b) => {
-    if (a.dueDate === b.dueDate) return b.weight - a.weight;
+    if (a.dueDate === b.dueDate) {
+    return b.weight - a.weight;
+   }
+
     return a.dueDate.localeCompare(b.dueDate);
   });
+
+ console.log('Cards gerados:', cards.length);
 
   return {
     cards: sorted.slice(0, limit),

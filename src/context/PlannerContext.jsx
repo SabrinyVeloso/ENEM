@@ -213,7 +213,12 @@ function buildCurrentStreak(state, scheduleData) {
 }
 
 function buildFlashcardAnalytics(state, scheduleData) {
-  const deck = buildFlashcardDeck(state, scheduleData, 50);
+const deck = buildFlashcardDeck(
+  state,
+  scheduleData,
+  30
+);
+  console.log('FLASHCARDS', deck);
   const history = Array.isArray(state.flashcardHistory) ? state.flashcardHistory : [];
   const correct = history.filter((entry) => entry.result === 'correct').length;
   const incorrect = history.filter((entry) => entry.result === 'incorrect').length;
@@ -221,6 +226,7 @@ function buildFlashcardAnalytics(state, scheduleData) {
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
   const streak = deck.cards.reduce((acc, card) => Math.max(acc, card.streak || 0), 0);
   const weeklyHistory = history.filter((entry) => {
+  
     if (!entry.createdAt) return false;
     const createdAt = new Date(entry.createdAt);
     const diffDays = Math.floor((new Date() - createdAt) / 86400000);
