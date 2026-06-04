@@ -34,14 +34,14 @@ export function AppShell() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(true);
-const today = new Date();
-
-const todayISO = `${today.getFullYear()}-${String(
-  today.getMonth() + 1
-).padStart(2, '0')}-${String(
-  today.getDate()
-).padStart(2, '0')}`;
-  const nextActiveDay = (schedule.weeks || []).flatMap((week) => week.days).find((day) => day.date > todayISO && (day.type === 'study' || day.type === 'review'));
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const nextActiveDay = (schedule?.weeks || [])
+  .flatMap((week) => week.days)
+  .find(
+    (day) =>
+      day.date > todayISO &&
+      (day.type === 'study' || day.type === 'review')
+  );
 
   useEffect(() => {
   const handleOnline = () => setOnline(true);
@@ -52,28 +52,15 @@ const todayISO = `${today.getFullYear()}-${String(
     setInstallPrompt(event);
   };
 
-  window.addEventListener('online', handleOnline);
-  window.addEventListener('offline', handleOffline);
-  window.addEventListener(
-    'beforeinstallprompt',
-    handleBeforeInstallPrompt
-  );
-
-  return () => {
-    window.removeEventListener(
-      'online',
-      handleOnline
-    );
-    window.removeEventListener(
-      'offline',
-      handleOffline
-    );
-    window.removeEventListener(
-      'beforeinstallprompt',
-      handleBeforeInstallPrompt
-    );
-  };
-}, []);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
 useEffect(() => {
   const mode =
@@ -121,31 +108,26 @@ useEffect(() => {
   const handleScroll = () => {
     const currentScroll = window.scrollY;
 
-    // Sempre mostra no topo da página
-    if (currentScroll < 20) {
+    if (currentScroll <= 20) {
       setHeaderVisible(true);
-      return;
-    }
-
-    // Esconde ao descer
-    if (currentScroll > lastScroll && currentScroll > 80) {
+    } else if (currentScroll > lastScroll) {
       setHeaderVisible(false);
-    }
-
-    // Mostra ao subir
-    if (currentScroll < lastScroll) {
+    } else {
       setHeaderVisible(true);
     }
 
     lastScroll = currentScroll;
   };
 
-  window.addEventListener('scroll', handleScroll);
+  window.addEventListener('scroll', handleScroll, {
+    passive: true
+  });
 
-  return () => {
+  return () =>
     window.removeEventListener('scroll', handleScroll);
-  };
 }, []);
+
+  
 
   async function handleInstallApp() {
     if (!installPrompt) return;
@@ -163,20 +145,21 @@ useEffect(() => {
     : 'fixed inset-x-3 bottom-3 z-40 flex justify-between items-center gap-2 rounded-[20px] border px-2 py-2 shadow-[0_18px_70px_rgba(0,0,0,0.45)] backdrop-blur-2xl lg:hidden';
 
   return (
-    <div
-      className="min-h-screen bg-[var(--bg)] text-[var(--text)]"
-      style={{
-        '--bg': themePalette.bg,
-        '--surface': themePalette.surface,
-        '--surface-alt': themePalette.surfaceAlt,
-        '--primary': themePalette.primary,
-        '--accent': themePalette.accent,
-        '--text': themePalette.text,
-        '--border': themePalette.border,
-        '--muted': themePalette.muted,
-        '--glow': themePalette.glow
-      }}
-    >
+  <div
+  className="min-h-screen bg-[var(--bg)] text-[var(--text)]"
+ style={{
+  '--bg': themePalette.bg,
+  '--surface': themePalette.surface,
+  '--surface-alt': themePalette.surfaceAlt,
+  '--primary': themePalette.primary,
+  '--accent': themePalette.accent,
+  '--text': themePalette.text,
+  '--border': themePalette.border,
+  '--muted': themePalette.muted,
+  '--glow': themePalette.glow
+
+}}
+>
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-28 -right-20 h-72 w-72 rounded-full bg-[var(--glow)] blur-3xl" />
         <div className="absolute -bottom-28 -left-24 h-80 w-80 rounded-full bg-[rgba(255,255,255,0.08)] blur-3xl" />
@@ -224,59 +207,54 @@ useEffect(() => {
 
         <div className={`flex min-h-screen w-full flex-1 flex-col ${state.focusMode ? 'lg:pl-0' : 'lg:pl-[352px]'}`}>
 <header
-  className="
-    sticky
-    top-0
-    z-30
-    border-b
-    border-[var(--border)]
-    px-5
-    py-6
-    lg:px-8
-    lg:py-5
-    safe-top
-    backdrop-blur-2xl
-    transition-all
-    duration-300
-  "
+  className={`sticky top-0 z-30 border-b border-[var(--border)] px-5 py-4 backdrop-blur-2xl lg:px-8 lg:py-5 safe-top transition-all duration-300 ${
+    headerVisible
+      ? 'translate-y-0 opacity-100'
+      : '-translate-y-full opacity-0'
+  }`}
   style={{
-    transform: headerVisible
-      ? 'translateY(0)'
-      : 'translateY(-100%)',
-    opacity: headerVisible ? 1 : 0,
     backgroundColor:
       (state.settings?.themeMode || state.theme) === 'dark'
-        ? 'rgba(5, 8, 20, 0.82)'
-        : 'rgba(243, 246, 249, 0.95)'
+        ? 'rgba(5, 8, 20, 0.72)'
+        : 'rgba(243, 246, 249, 0.88)'
   }}
 >
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0">
+      <p className="text-[12px] font-black uppercase tracking-[0.32em] text-[var(--muted)]">
+        ENEM Planner
+      </p>
 
-        
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[12px] font-black uppercase tracking-[0.32em] text-[var(--muted)]">ENEM Planner</p>
-                <p className="
-  mt-2
-  text-[18px]
-  font-bold
-  text-[var(--text)]
-  sm:text-base
-">
-                  {dashboard.todayReviewDay ? 'Hoje é dia de revisão.' : dashboard.todayStudyItems.length > 0 ? 'Hoje é dia de estudar.' : nextActiveDay ? `Faltam ${Math.max(1, Math.round((new Date(`${nextActiveDay.date}T00:00:00`) - new Date(`${todayISO}T00:00:00`)) / 86400000))} dias para o próximo estudo.` : 'Seu próximo estudo está definido.'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-12 items-center gap-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.08)] px-5 text-[15px] font-black text-[var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
-                aria-label="Abrir configurações"
-              >
-                <SettingsIcon className="h-5 w-5" />
-                <span className="hidden sm:inline">Configurações</span>
-              </button>
-            </div>
-          </header>
+      <p className="mt-1 truncate text-[15px] font-semibold text-[var(--text)] sm:text-base">
+        {dashboard.todayReviewDay
+          ? 'Hoje é dia de revisão.'
+          : dashboard.todayStudyItems.length > 0
+          ? 'Hoje é dia de estudar.'
+          : nextActiveDay
+          ? `Faltam ${Math.max(
+              1,
+              Math.round(
+                (new Date(`${nextActiveDay.date}T00:00:00`) -
+                  new Date(`${todayISO}T00:00:00`)) /
+                  86400000
+              )
+            )} dias para o próximo estudo.`
+          : 'Seu próximo estudo está definido.'}
+      </p>
+    </div>
 
+    <button
+      type="button"
+      onClick={() => setSettingsOpen(true)}
+      className="inline-flex h-12 w-12 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.1)] text-[15px] font-black text-[var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:w-auto sm:px-5"
+      aria-label="Abrir configurações"
+    >
+      <SettingsIcon className="h-5 w-5" />
+      <span className="hidden sm:inline">Configurações</span>
+    </button>
+  </div>
+</header>
+            
           <main className="flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-8">
             <Outlet />
           </main>
