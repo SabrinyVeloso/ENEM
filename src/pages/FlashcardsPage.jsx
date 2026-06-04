@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { usePlanner } from '../context/PlannerContext';
-import { GlassCard } from '../components/Ui';
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { usePlanner } from "../context/PlannerContext";
+import { GlassCard } from "../components/Ui";
 
 export default function FlashcardsPage() {
   const navigate = useNavigate();
@@ -37,8 +37,8 @@ export default function FlashcardsPage() {
 
     const container = scrollRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
+      container.addEventListener("scroll", handleScroll);
+      return () => container.removeEventListener("scroll", handleScroll);
     }
   }, []);
 
@@ -52,19 +52,32 @@ export default function FlashcardsPage() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
               <p className="text-xs opacity-60 mb-1">Acertos</p>
-              <p className="text-2xl font-black text-green-500">✅ {correctCount}</p>
+              <p className="text-2xl font-black text-green-500">
+                ✅ {correctCount}
+              </p>
             </div>
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
               <p className="text-xs opacity-60 mb-1">Erros</p>
-              <p className="text-2xl font-black text-red-500">❌ {incorrectCount}</p>
+              <p className="text-2xl font-black text-red-500">
+                ❌ {incorrectCount}
+              </p>
             </div>
           </div>
 
           <p className="text-sm opacity-70 mb-6">
-            Acurácia: <span className="font-bold">{Math.round((correctCount / (correctCount + incorrectCount)) * 100)}%</span>
+            Acurácia:{" "}
+            <span className="font-bold">
+              {Math.round(
+                (correctCount / (correctCount + incorrectCount)) * 100,
+              )}
+              %
+            </span>
           </p>
 
-          <button onClick={() => navigate(-1)} className="app-button-primary w-full">
+          <button
+            onClick={() => navigate(-1)}
+            className="app-button-primary w-full"
+          >
             Voltar
           </button>
         </GlassCard>
@@ -76,8 +89,13 @@ export default function FlashcardsPage() {
     return (
       <GlassCard className="p-6 text-center max-w-sm mx-auto">
         <h2 className="text-xl font-bold mb-3">Nenhum flashcard disponível</h2>
-        <p className="text-sm opacity-70 mb-4">Você não tem cartões para revisar no momento.</p>
-        <button onClick={() => navigate('/')} className="app-button-primary w-full">
+        <p className="text-sm opacity-70 mb-4">
+          Você não tem cartões para revisar no momento.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          className="app-button-primary w-full"
+        >
           Voltar para Home
         </button>
       </GlassCard>
@@ -92,13 +110,13 @@ export default function FlashcardsPage() {
 
   function markCorrect() {
     setCorrectCount((c) => c + 1);
-    actions.recordFlashcardResult(currentCard, 'correct');
+    actions.recordFlashcardResult(currentCard, "correct");
     nextCard();
   }
 
   function markIncorrect() {
     setIncorrectCount((c) => c + 1);
-    actions.recordFlashcardResult(currentCard, 'incorrect');
+    actions.recordFlashcardResult(currentCard, "incorrect");
     nextCard();
   }
 
@@ -111,12 +129,14 @@ export default function FlashcardsPage() {
   }
 
   function startDrag(e) {
-    setDragStart(e.type.includes('mouse') ? e.clientX : e.touches[0].clientX);
+    setDragStart(e.type.includes("mouse") ? e.clientX : e.touches[0].clientX);
   }
 
   function moveDrag(e) {
     if (dragStart === null) return;
-    const currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+    const currentX = e.type.includes("mouse")
+      ? e.clientX
+      : e.touches[0].clientX;
     setDragOffset(currentX - dragStart);
   }
 
@@ -135,7 +155,7 @@ export default function FlashcardsPage() {
       {/* Header - Sticky */}
       <div
         className={`sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--border)] transition-all duration-300 ${
-          headerVisible ? 'opacity-100 visible' : 'opacity-0 invisible'
+          headerVisible ? "opacity-100 visible" : "opacity-0 invisible"
         }`}
       >
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -152,7 +172,9 @@ export default function FlashcardsPage() {
                 {correctCount + incorrectCount}/30
               </p>
             </div>
-            <div className="px-4 py-3 text-base font-semibold opacity-0">placeholder</div>
+            <div className="px-4 py-3 text-base font-semibold opacity-0">
+              placeholder
+            </div>
           </div>
         </div>
       </div>
@@ -175,26 +197,36 @@ export default function FlashcardsPage() {
           onTouchEnd={finishDrag}
         >
           <div
-            className={`flashcard-container ${flipped ? 'flipped' : ''}`}
+            className={`flashcard-container ${flipped ? "flipped" : ""}`}
             style={{
               transform: `translateX(${dragOffset}px) rotate(${dragOffset / 20}deg) ${
-                flipped ? 'rotateY(180deg)' : ''
-              }`
+                flipped ? "rotateY(180deg)" : ""
+              }`,
             }}
             onClick={() => setFlipped(!flipped)}
           >
             <div className="flashcard-front">
               <div>
-                <div className="mb-3 text-xs uppercase opacity-60">Pergunta</div>
-                <h2 className="text-2xl sm:text-3xl font-bold">{currentCard.front}</h2>
+                <div className="mb-3 text-xs uppercase opacity-60">
+                  Pergunta
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold">
+                  {currentCard.front}
+                </h2>
               </div>
-              <p className="mt-6 text-sm opacity-70">Toque para revelar a resposta</p>
+              <p className="mt-6 text-sm opacity-70">
+                Toque para revelar a resposta
+              </p>
             </div>
 
             <div className="flashcard-back">
               <div>
-                <div className="mb-3 text-xs uppercase opacity-60">Resposta</div>
-                <h2 className="text-2xl sm:text-3xl font-bold">{currentCard.back}</h2>
+                <div className="mb-3 text-xs uppercase opacity-60">
+                  Resposta
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold">
+                  {currentCard.back}
+                </h2>
               </div>
               <p className="mt-6 text-sm opacity-70">
                 ➡️ Acertei
@@ -207,7 +239,12 @@ export default function FlashcardsPage() {
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3 mt-8">
-          <button onClick={() => setCardIndex((i) => (i === 0 ? deck.length - 1 : i - 1))} className="app-button-secondary">
+          <button
+            onClick={() =>
+              setCardIndex((i) => (i === 0 ? deck.length - 1 : i - 1))
+            }
+            className="app-button-secondary"
+          >
             ← Anterior
           </button>
 
@@ -232,17 +269,30 @@ export default function FlashcardsPage() {
       {/* Exit Confirmation Modal */}
       {showExitConfirm && (
         <div className="fixed inset-0 z-50 grid place-items-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowExitConfirm(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowExitConfirm(false)}
+          />
           <GlassCard className="relative max-w-sm p-6 text-center">
             <h3 className="text-xl font-bold mb-3">Sair da revisão?</h3>
             <p className="text-sm opacity-70 mb-6">
-              Você respondeu <span className="font-semibold">{correctCount + incorrectCount} cartões</span> e perderá este progresso se sair agora.
+              Você respondeu{" "}
+              <span className="font-semibold">
+                {correctCount + incorrectCount} cartões
+              </span>{" "}
+              e perderá este progresso se sair agora.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowExitConfirm(false)} className="app-button-secondary">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="app-button-secondary"
+              >
                 Continuar
               </button>
-              <button onClick={() => navigate(-1)} className="app-button-primary">
+              <button
+                onClick={() => navigate(-1)}
+                className="app-button-primary"
+              >
                 Sair mesmo assim
               </button>
             </div>
