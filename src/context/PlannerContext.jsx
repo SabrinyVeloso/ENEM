@@ -214,12 +214,7 @@ function buildCurrentStreak(state, scheduleData) {
 }
 
 function buildFlashcardAnalytics(state, scheduleData) {
-const deck = buildFlashcardDeck(
-  
- 
-  
-);
-  console.log('FLASHCARDS', deck);
+  const deck = buildFlashcardDeck(state, scheduleData);
   const history = Array.isArray(state.flashcardHistory) ? state.flashcardHistory : [];
   const correct = history.filter((entry) => entry.result === 'correct').length;
   const incorrect = history.filter((entry) => entry.result === 'incorrect').length;
@@ -258,6 +253,11 @@ function getItemDueDate(state, item) {
 
 function buildTodayStudyItems(state, scheduleData) {
   const today = getTodayISO();
+  const currentDay = getCurrentDay(scheduleData);
+  if (!currentDay || currentDay.type !== 'study') {
+    return [];
+  }
+
   return getContentItems(scheduleData)
     .filter((item) => item.scheduledFor === today)
     .map((item) => ({

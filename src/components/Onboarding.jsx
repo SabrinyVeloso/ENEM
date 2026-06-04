@@ -57,7 +57,7 @@ export default function Onboarding() {
             <div className="grid gap-3">
               <p className="text-sm text-[var(--muted)]">Quais dias da semana você pretende estudar?</p>
               <div className="flex gap-2 flex-wrap">
-                {[['dom', 'Dom'], ['mon', 'Seg'], ['tue', 'Ter'], ['wed', 'Qua'], ['thu', 'Qui'], ['fri', 'Sex'], ['sat', 'Sáb']].map(([key, label]) => {
+                {[['sun', 'Dom'], ['mon', 'Seg'], ['tue', 'Ter'], ['wed', 'Qua'], ['thu', 'Qui'], ['fri', 'Sex'], ['sat', 'Sáb']].map(([key, label]) => {
                   const active = studyDays.includes(key);
                   return (
                     <button
@@ -111,7 +111,7 @@ export default function Onboarding() {
               <ul className="text-sm">
                 <li>Data de início: {studyStartDate}</li>
                 <li>Tempo de estudo: {studyTimeOptions.find((option) => option.value === hoursPerDay)?.label || `${hoursPerDay} minutos`}</li>
-                <li>Dias escolhidos: {studyDays.map((d) => (d === 'dom' ? 'Dom' : d === 'mon' ? 'Seg' : d === 'tue' ? 'Ter' : d === 'wed' ? 'Qua' : d === 'thu' ? 'Qui' : d === 'fri' ? 'Sex' : 'Sáb')).join(', ')}</li>
+                <li>Dias escolhidos: {studyDays.map((d) => (d === 'sun' ? 'Dom' : d === 'mon' ? 'Seg' : d === 'tue' ? 'Ter' : d === 'wed' ? 'Qua' : d === 'thu' ? 'Qui' : d === 'fri' ? 'Sex' : 'Sáb')).join(', ')}</li>
               </ul>
 
               <p className="text-sm text-[var(--muted)]">Ao confirmar, seu cronograma será gerado automaticamente e você será levado ao painel.</p>

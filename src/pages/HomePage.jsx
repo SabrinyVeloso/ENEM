@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
 import { EmptyState, GlassCard, ProgressBar, SectionHeader, StatTile, StatusBadge } from '../components/Ui';
 import PomodoroWidget from '../components/PomodoroWidget';
@@ -37,26 +38,6 @@ function StudyItemCard({ item, onStatus }) {
   );
 }
 
-function ReviewItemCard({ item, onResult }) {
-  return (
-    <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{item.subjectLabel}</p>
-          <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{item.front}</strong>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Resposta: {item.back}</p>
-        </div>
-        <StatusBadge status={item.status === 'due' ? 'pending' : 'done'}>{item.status === 'due' ? 'revisar' : 'agendado'}</StatusBadge>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => onResult(item, 'correct')} className="app-button-primary w-full text-xs">Acertei</button>
-        <button type="button" onClick={() => onResult(item, 'incorrect')} className="app-button-secondary w-full text-xs">Errei</button>
-      </div>
-    </div>
-  );
-}
-
 // OverdueCard removed (unused)
 
 function ReminderCard({ item }) {
@@ -74,6 +55,7 @@ function ReminderCard({ item }) {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const { dashboard, actions, state, schedule } = usePlanner();
   const [showMore] = useState(false);
   const displayName = state.settings.profileName?.trim() || 'Seu nome';
@@ -86,11 +68,48 @@ export default function HomePage() {
     return 'Boa noite';
   }
 
+  function getContentStatus(contentId) {
+    return state?.contentStatuses?.[contentId] || 'pending';
+  }
+
+  function getContentItems() {
+    return schedule?.weeks?.flatMap((week) =>
+      week.days.map((day) => ({
+        id: day.contentId,
+        title: day.subject || 'N/A',
+        subjectLabel: day.subject || 'N/A',
+        description: day.title || ''
+      }))
+    ) || [];
+  }
+
   const reminders = dashboard.reminders.slice(0, 3);
   const todayItems = dashboard.todayReviewDay ? dashboard.todayReviewItems.slice(0, 4) : dashboard.todayStudyItems.slice(0, 4);
   const motivation = dashboard.motivations[0];
   const hasMoreToday = dashboard.todayReviewDay ? dashboard.todayReviewItems.length > todayItems.length : dashboard.todayStudyItems.length > todayItems.length;
   const nextActiveDay = schedule.weeks.flatMap((week) => week.days).find((day) => day.date > today && (day.type === 'study' || day.type === 'review'));
+  
+  // Auto-classificar conteúdos atrasados como perdidos
+  const overduePendingItems = schedule.weeks
+    .flatMap((week) => week.days)
+    .filter((day) => day.type === 'study' && day.date < today && day.contentId && getContentStatus(day.contentId) === 'pending')
+    .map((day) => day.contentId);
+  
+  // Aplicar auto-classificação
+  if (overduePendingItems.length > 0) {
+    overduePendingItems.forEach((contentId) => {
+      actions.setContentStatus(contentId, 'perdido');
+    });
+  }
+
+  // Conteúdos atrasados (com status de loss)
+  const overdueItems = schedule.weeks
+    .flatMap((week) => week.days)
+    .filter((day) => day.type === 'study' && day.date < today && day.contentId && getContentStatus(day.contentId) === 'perdido')
+    .map((day) => day)
+    .filter(Boolean)
+    .slice(0, 10);
+
   const nextStudyMessage = dashboard.todayReviewDay
     ? 'Hoje é dia de revisar.'
     : dashboard.todayStudyItems.length > 0
@@ -131,18 +150,51 @@ export default function HomePage() {
           </div>
         </GlassCard>
 
+        {overdueItems.length > 0 && (
+          <GlassCard className="p-4 sm:p-5 border-red-500/30 bg-red-500/5">
+            <SectionHeader eyebrow="⚠️ Atenção" title="Conteúdos atrasados" />
+            <div className="mt-4 grid gap-3">
+              <div className="rounded-[24px] border border-red-500/20 bg-red-500/10 p-4">
+                <p className="text-sm font-bold text-red-500 mb-3">
+                  Você possui {overdueItems.length} conteúdo{overdueItems.length !== 1 ? 's' : ''} atrasado{overdueItems.length !== 1 ? 's' : ''}.
+                </p>
+                <p className="text-xs opacity-70 mb-4">Eles já estão prontos para revisão e reagendamento.</p>
+                <div className="space-y-2">
+                  {overdueItems.slice(0, 3).map((item) => (
+                    <div key={item.id} className="text-xs p-2 rounded bg-white/5 border border-red-500/20">
+                      <p className="font-semibold">{item.title}</p>
+                      <p className="opacity-70">{item.subjectLabel}</p>
+                    </div>
+                  ))}
+                  {overdueItems.length > 3 && (
+                    <p className="text-xs opacity-70 text-center pt-2">+ {overdueItems.length - 3} mais conteúdo{overdueItems.length - 3 !== 1 ? 's' : ''}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        )}
+
         <GlassCard className="p-4 sm:p-5">
           <SectionHeader eyebrow={dashboard.todayReviewDay ? 'Revisão de hoje' : 'Estudos de hoje'} title={dashboard.todayReviewDay ? 'Flashcards e revisão espaçada' : 'Conteúdos programados'} />
           <div className="mt-4 grid gap-3">
             {todayItems.length === 0 ? (
               <EmptyState title={dashboard.todayReviewDay ? 'Sem flashcards para hoje' : 'Sem estudos para hoje'} subtitle={dashboard.todayReviewDay ? 'Ainda não há cartões liberados para a revisão de hoje.' : 'Seu cronograma não tem novos itens programados para hoje.'} />
             ) : dashboard.todayReviewDay ? (
-              todayItems.map((item) => <ReviewItemCard key={item.id} item={item} onResult={actions.recordFlashcardResult} />)
+              <div className="rounded-[24px] border border-[var(--border)] bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-4">
+                <p className="text-sm font-semibold">Você tem <span className="font-black">{dashboard.todayReviewItems.length} flashcards</span> para revisar hoje.</p>
+                <button
+                  onClick={() => navigate('/flashcards')}
+                  className="app-button-primary mt-3 w-full"
+                >
+                  Começar revisão →
+                </button>
+              </div>
             ) : (
               todayItems.map((item) => <StudyItemCard key={item.id} item={item} onStatus={actions.setContentStatus} />)
             )}
           </div>
-          {hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {(dashboard.todayReviewDay ? dashboard.todayReviewItems.length : dashboard.todayStudyItems.length) - todayItems.length} itens também estão programados para hoje.</p> : null}
+          {!dashboard.todayReviewDay && hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {dashboard.todayStudyItems.length - todayItems.length} itens também estão programados para hoje.</p> : null}
         </GlassCard>
       </section>
 
