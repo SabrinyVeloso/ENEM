@@ -1717,6 +1717,7 @@ function createContentItem(subject, index, topic, weekNumber, date) {
     date,
     title: summary.title,
     description: `${subjectMeta[subject].label} - ${summary.frequency}, ${summary.difficulty.toLowerCase()}.`,
+    studyDescription: summary.description,
     scheduledFor: date,
     priority: summary.priority,
     priorityLabel: summary.priorityLabel,
@@ -1867,7 +1868,7 @@ function buildBalancedStudySelection(studiedItems, limit) {
     return acc;
   }, {});
   const selection = [];
-  const maxItems = Math.max(1, Math.ceil(limit / 2));
+  const maxItems = Math.max(1, limit);
   let cursor = 0;
   let pushed = false;
 
@@ -1885,6 +1886,38 @@ function buildBalancedStudySelection(studiedItems, limit) {
 
   return selection;
 }
+
+const flashcardTemplates = [
+  {
+    question: (item) => `O que estudar em ${item.title}?`,
+    answer: (item) => item.studyDescription,
+  },
+  {
+    question: (item) => `Por que ${item.title} merece revisao?`,
+    answer: (item) =>
+      `${item.title} tem frequencia ${item.frequency.toLowerCase()} no plano e importancia ${item.importance}/5.`,
+  },
+  {
+    question: (item) => `Qual e o nivel de dificuldade de ${item.title}?`,
+    answer: (item) =>
+      `Dificuldade: ${item.difficulty}. Use isso para ajustar o tempo de teoria, exercicios e revisao.`,
+  },
+  {
+    question: (item) => `Como revisar ${item.title} de forma ativa?`,
+    answer: (item) =>
+      `Explique o conceito com suas palavras, resolva exercicios curtos e confira se consegue aplicar: ${item.studyDescription}`,
+  },
+  {
+    question: (item) => `Qual e o foco principal de ${item.title} no ENEM?`,
+    answer: (item) =>
+      `${item.studyDescription} Priorize leitura atenta do enunciado e aplicacao em situacoes-problema.`,
+  },
+  {
+    question: (item) => `Quando considerar ${item.title} dominado?`,
+    answer: () =>
+      "Quando voce conseguir reconhecer o tipo de questao, escolher o metodo e justificar a resposta sem consultar resumo.",
+  },
+];
 
 export function buildFlashcardDeck(
   state = {},
@@ -1904,21 +1937,24 @@ export function buildFlashcardDeck(
     return (b.scheduledFor || "").localeCompare(a.scheduledFor || "");
   });
 
-  const selectedItems = buildBalancedStudySelection(studiedItems, 1);
+  const selectedItems = buildBalancedStudySelection(
+    studiedItems,
+    Math.ceil(limit / flashcardTemplates.length),
+  );
 
   const progress = state.flashcardProgress || {};
   const cards = [];
 
   selectedItems.forEach((item) => {
-    for (let variantIndex = 0; variantIndex < 30; variantIndex++) {
+    flashcardTemplates.forEach((template, variantIndex) => {
       const cardId = `${item.id}-flash-${variantIndex + 1}`;
       const progressEntry = progress[cardId] || {};
       const correct = Number(progressEntry.correct || 0);
       const incorrect = Number(progressEntry.incorrect || 0);
       const dueDate = progressEntry.nextDueAt || today;
       const weight = Math.max(1, 3 + incorrect - correct);
-      const front = `O que é ${item.title}?`;
-      const back = item.description || "";
+      const front = template.question(item);
+      const back = template.answer(item);
 
       cards.push({
         id: cardId,
@@ -1939,9 +1975,8 @@ export function buildFlashcardDeck(
         lastReviewedAt: progressEntry.lastReviewedAt || null,
         status: dueDate <= today ? "due" : "scheduled",
       });
-    }
+    });
   });
-
   const sorted = cards.sort((a, b) => {
     if (a.dueDate === b.dueDate) {
       return b.weight - a.weight;
@@ -1955,7 +1990,7 @@ export function buildFlashcardDeck(
     totalCards: sorted.length,
     dueCards: sorted.filter((card) => card.status === "due"),
     subjectCounts: selectedItems.reduce((acc, item) => {
-      acc[item.subject] = (acc[item.subject] || 0) + 30;
+      acc[item.subject] = (acc[item.subject] || 0) + flashcardTemplates.length;
       return acc;
     }, {}),
   };
