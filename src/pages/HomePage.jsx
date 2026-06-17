@@ -157,8 +157,6 @@ export default function HomePage() {
     .map((day) => day)
     .filter(Boolean)
     .slice(0, 10);
-
->>>>>>> be0b1e59d27e9e72364554b03e76df2a2f8cd6fa
   const nextStudyMessage = dashboard.todayReviewDay
     ? "Hoje é dia de revisar."
     : dashboard.todayStudyItems.length > 0

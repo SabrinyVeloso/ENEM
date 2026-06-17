@@ -33,6 +33,64 @@ export const themePalettes = {
   },
 };
 
+export const accentColors = {
+  blue: {
+    primary: "#2F8DFF",
+    primaryStrong: "#08307A",
+    accent: "#79C6FF",
+    accentLight: "#DFF4FF",
+    hover: "#1E6FE6",
+    onPrimary: "#FFFFFF",
+    muted: "#94A3B8",
+    border: "rgba(47,141,255,0.12)",
+    glow: "rgba(47,141,255,0.12)",
+  },
+  purple: {
+    primary: "#7C3AED",
+    primaryStrong: "#4C1D95",
+    accent: "#C4B5FD",
+    accentLight: "#F3E8FF",
+    hover: "#6D28D9",
+    onPrimary: "#FFFFFF",
+    muted: "#9CA3AF",
+    border: "rgba(124,58,237,0.08)",
+    glow: "rgba(124,58,237,0.08)",
+  },
+  green: {
+    primary: "#22C55E",
+    primaryStrong: "#15803D",
+    accent: "#BBF7D0",
+    accentLight: "#ECFDF5",
+    hover: "#16A34A",
+    onPrimary: "#062E1A",
+    muted: "#86efac",
+    border: "rgba(34,197,94,0.08)",
+    glow: "rgba(34,197,94,0.08)",
+  },
+  orange: {
+    primary: "#F59E0B",
+    primaryStrong: "#92400E",
+    accent: "#FFDAB5",
+    accentLight: "#FFF7ED",
+    hover: "#D97706",
+    onPrimary: "#1F1A03",
+    muted: "#FBBF24",
+    border: "rgba(245,158,11,0.08)",
+    glow: "rgba(245,158,11,0.08)",
+  },
+  pink: {
+    primary: "#EC4899",
+    primaryStrong: "#9F1239",
+    accent: "#FED7E2",
+    accentLight: "#FFF1F8",
+    hover: "#DB2777",
+    onPrimary: "#FFFFFF",
+    muted: "#FBCFE8",
+    border: "rgba(236,72,153,0.08)",
+    glow: "rgba(236,72,153,0.08)",
+  },
+};
+
 export const scheduleStart = "2026-07-05";
 export const enemDate = "2026-11-08";
 
