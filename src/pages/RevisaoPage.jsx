@@ -2,7 +2,8 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { usePlanner } from '../context/PlannerContext';
-import { EmptyState, GlassCard, ProgressBar, SectionHeader, StatTile, StatusBadge } from '../components/Ui';
+import { EmptyState, GlassCard, SectionHeader, StatTile } from '../components/Ui';
+import { subjectMeta } from '../data/planner';
 
 const subjectLabels = {
   math: 'Matemática',
@@ -34,135 +35,108 @@ function SubjectSummary({ label, count, total }) {
 
 export default function RevisaoPage() {
   const { dashboard } = usePlanner();
-  const deck = dashboard.reviewDeck || [];
-  const totalCards = deck.length;
-  const dueCards = dashboard.reviewDueCount || 0;
-  const answered = dashboard.flashcardAnswered || 0;
-  const accuracy = answered > 0 ? (dashboard.flashcardCorrect / answered) * 100 : 0;
-  const subjectEntries = Object.entries(dashboard.flashcardSubjectCounts || {}).sort((a, b) => b[1] - a[1]);
+  const contents = dashboard.revisionContents || [];
+  const totalContents = dashboard.revisionTotalContents || 0;
+  const totalResources = dashboard.revisionResourcesTotal || 0;
+  const studyDays = dashboard.studyDays || [];
 
-  const difficultCards = useMemo(
-    () => deck.filter((card) => (card.incorrect || 0) > (card.correct || 0)).slice(0, 5),
-    [deck]
-  );
+  const subjectEntries = useMemo(() => {
+    const map = {};
+    contents.forEach((c) => {
+      map[c.subject] = (map[c.subject] || 0) + 1;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [contents]);
+
+  const groupedBySubject = useMemo(() => {
+    const order = studyDays.map((d) => d.contentId);
+    const groups = {};
+    contents.forEach((c) => {
+      groups[c.subject] = groups[c.subject] || [];
+      groups[c.subject].push(c);
+    });
+    // sort each group's contents by order of studyDays (oldest first)
+    Object.keys(groups).forEach((subject) => {
+      groups[subject].sort((a, b) => {
+        const ia = order.indexOf(a.id);
+        const ib = order.indexOf(b.id);
+        return ia - ib;
+      });
+    });
+    return groups;
+  }, [contents, studyDays]);
+
+  if (!dashboard.todayReviewDay) {
+    return (
+      <div className="grid gap-4 pb-6">
+        <GlassCard className="p-5">
+          <SectionHeader eyebrow="Revisão" title="Hoje não é um dia de revisão" subtitle={`Próxima revisão: ${dashboard.nextReview?.label || '—'}`} />
+        </GlassCard>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid gap-4 pb-6">
+    <div className="grid gap-4 pb-6 max-w-6xl mx-auto w-full px-4">
       <GlassCard className="overflow-hidden p-4 sm:p-5">
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div className="max-w-6xl mx-auto w-full text-center">
           <SectionHeader
             eyebrow="Revisão"
-            title="Prepare sua sessão de flashcards"
-            subtitle="Aqui ficam apenas o resumo, o progresso e os dados da revisão. A experiência de estudo abre em uma tela exclusiva, sem menus ou distrações."
+            title="Atividades e recursos para praticar"
+            subtitle="Central de exercícios e materiais baseados nos conteúdos que você estudou esta semana."
           />
-
-          <div className="rounded-[28px] border border-[var(--border)] bg-[rgba(255,255,255,0.08)] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">Fila atual</p>
-                <strong className="mt-1 block text-4xl font-black tracking-tight text-[var(--text)]">{totalCards}</strong>
-              </div>
-              <StatusBadge status={dueCards > 0 ? 'review' : 'done'}>{dueCards > 0 ? `${dueCards} para hoje` : 'em dia'}</StatusBadge>
-            </div>
-
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm font-semibold text-[var(--muted)]">
-                <span>Cards pendentes</span>
-                <span>{dueCards}/{Math.max(1, totalCards)}</span>
-              </div>
-              <div className="mt-2">
-                <ProgressBar value={(dueCards / Math.max(1, totalCards)) * 100} />
-              </div>
-            </div>
-
-            <Link
-              to="/revisao/estudar"
-              className={`mt-5 w-full ${totalCards > 0 ? 'app-button-primary' : 'app-button-secondary pointer-events-none opacity-60'}`}
-              aria-disabled={totalCards === 0}
-            >
-              Iniciar Revisão
-            </Link>
-          </div>
         </div>
       </GlassCard>
 
-      <section className="grid gap-4 xl:grid-cols-4">
-        <StatTile label="Flashcards" value={totalCards} caption="disponíveis para estudo" tone="brand" />
-        <StatTile label="Acertos" value={dashboard.flashcardCorrect} caption="respostas corretas" tone="good" />
-        <StatTile label="Erros" value={dashboard.flashcardIncorrect} caption="pontos a reforçar" tone="bad" />
-        <StatTile label="Aproveitamento" value={formatPercent(accuracy)} caption="taxa geral" tone="warn" />
+      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 max-w-6xl mx-auto w-full">
+        <StatTile label="Conteúdos" value={totalContents} caption="estudados nesta semana" tone="brand" />
+        <StatTile label="Recursos" value={totalResources} caption="links encontrados" tone="good" />
+        <StatTile label="Matérias" value={subjectEntries.length} caption="matérias cobertas" tone="warn" />
+        <StatTile label="Prioridade" value={contents.length ? contents[0].title : '—'} caption="maior prioridade" tone="brand" />
       </section>
-<section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
 
-  <GlassCard className="p-4 sm:p-5">
-    <SectionHeader
-      eyebrow="Progresso"
-      title="Estatísticas da revisão"
-      subtitle="Esses números são atualizados conforme você responde os cards."
-    />
+      <GlassCard className="p-4 sm:p-5">
+        <SectionHeader eyebrow="Conteúdos" title="Recursos recomendados" subtitle="Selecione um conteúdo para ver atividades e links práticos." />
+        <div className="max-w-6xl mx-auto w-full">
+            <div className="mt-4 grid gap-6">
+          {contents.length === 0 ? (
+            <EmptyState title="Ainda sem registros" subtitle="Finalize conteúdos no cronograma para que apareçam sugestões aqui." />
+          ) : (
+            Object.entries(groupedBySubject).map(([subject, items]) => (
+              <div key={subject} className="w-full">
+                <h3 className="text-sm font-extrabold uppercase text-[var(--muted)] mb-3 text-left">{subjectMeta[subject]?.label || subject}</h3>
+                <div className="grid gap-6 grid-cols-1 items-stretch w-full">
+                  {items.map((c) => (
+                    <div key={c.id} className="rounded-[18px] border border-[var(--border)] bg-[rgba(255,255,255,0.02)] p-4 shadow-sm w-full flex flex-col justify-between min-h-[100px] md:min-h-[140px]">
+                      <div className="flex items-start gap-3">
+                        <div className="w-full">
+                          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--muted)]">{c.subjectLabel}</p>
+                          <strong className="block mt-1 text-xl font-extrabold text-[var(--text)] leading-tight">{c.title}</strong>
+                        </div>
+                      </div>
 
-    <div className="mt-4 grid gap-3">
-      <div className="rounded-[20px] border border-[var(--border)] bg-white/5 p-4">
-        <div className="flex items-center justify-between text-sm font-semibold text-[var(--muted)]">
-          <span>Histórico respondido</span>
-          <span>{answered}</span>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {((c.resources || []).filter(r => !/videoaula|vídeo|video/i.test(r.title))).map((r, idx) => (
+                          <a
+                            key={idx}
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-3 px-3 py-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.03)] text-sm font-semibold text-[var(--text)] hover:bg-[rgba(255,255,255,0.06)] transition max-w-full"
+                          >
+                            <span className="truncate max-w-[calc(100vw-200px)]">{r.title}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+            </div>
         </div>
-
-        <div className="mt-2">
-          <ProgressBar value={accuracy} />
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[20px] border border-[var(--border)] bg-white/5 p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">
-            Últimos 7 dias
-          </p>
-          <strong className="mt-1 block text-2xl font-black text-[var(--text)]">
-            {dashboard.flashcardWeeklyHistory.length}
-          </strong>
-        </div>
-
-        <div className="rounded-[20px] border border-[var(--border)] bg-white/5 p-4">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">
-            Este mês
-          </p>
-          <strong className="mt-1 block text-2xl font-black text-[var(--text)]">
-            {dashboard.flashcardMonthlyHistory.length}
-          </strong>
-        </div>
-      </div>
-    </div>
-  </GlassCard>
-
-
-</section>
-
-<GlassCard className="p-4 sm:p-5">
-  <SectionHeader
-    eyebrow="Matérias"
-    title="Cobertura dos flashcards"
-    subtitle="Veja a distribuição da fila antes de iniciar a sessão."
-  />
-
-  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-    {subjectEntries.length === 0 ? (
-      <EmptyState
-        title="Ainda sem dados"
-        subtitle="Conclua conteúdos do cronograma para gerar cartões de revisão."
-      />
-    ) : (
-      subjectEntries.map(([subject, count]) => (
-        <SubjectSummary
-          key={subject}
-          label={subjectLabels[subject] || subject}
-          count={count}
-          total={totalCards}
-        />
-      ))
-    )}
-  </div>
-</GlassCard>
+      </GlassCard>
     </div>
   );
 }

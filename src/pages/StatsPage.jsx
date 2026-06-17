@@ -61,11 +61,11 @@ export default function StatsPage() {
         </GlassCard>
 
         <GlassCard className="p-4 sm:p-5">
-          <SectionHeader eyebrow="Flashcards" title="Aproveitamento de revisão" subtitle="Os cartões errados voltam mais vezes e os certos reaparecem menos." />
+          <SectionHeader eyebrow="Revisões" title="Atividades e recursos" subtitle="Resumo dos conteúdos revisados e links encontrados." />
           <div className="mt-4 grid gap-3">
-            <StatTile label="Aproveitamento" value={`${dashboard.flashcardAccuracy}%`} caption="taxa de acerto" tone="good" />
-            <StatTile label="Cartões respondidos" value={dashboard.flashcardAnswered} caption="acertos + erros" tone="brand" />
-            <StatTile label="Cards para voltar" value={dashboard.reviewDueCount} caption="agendados ou atrasados" tone="warn" />
+            <StatTile label="Conteúdos (semana)" value={dashboard.revisionTotalContents} caption="conteúdos estudados" tone="good" />
+            <StatTile label="Recursos" value={dashboard.revisionResourcesTotal} caption="links encontrados" tone="brand" />
+            <StatTile label="Cards/Atividades" value={dashboard.reviewDueCount} caption="itens para revisão" tone="warn" />
           </div>
         </GlassCard>
       </section>
@@ -119,9 +119,9 @@ export default function StatsPage() {
             <strong className="mt-2 block text-3xl font-black text-[var(--text)]">{dashboard.lost}</strong>
           </div>
         </div>
-        {dashboard.reviewDueCount === 0 ? (
+        {dashboard.revisionTotalContents === 0 ? (
           <div className="mt-4">
-            <EmptyState title="Tudo em dia" subtitle="Nenhum flashcard precisa voltar agora." />
+            <EmptyState title="Tudo em dia" subtitle="Nenhum conteúdo revisado recentemente." />
           </div>
         ) : null}
       </GlassCard>

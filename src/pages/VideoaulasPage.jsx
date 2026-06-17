@@ -90,16 +90,16 @@ export default function VideoaulasPage() {
         suggestion: `Hoje você estudou ${item.title}. Assista a esse vídeo para reforçar o conteúdo.`,
         url: `https://www.youtube.com/results?search_query=${encodeURIComponent(searchQuery)}`
       };
-    });
-  }, [todayStudyItems]);
+    }).filter(item => !watchedVideos[item.videoId]);
+  }, [todayStudyItems, watchedVideos]);
 
   const filteredSuggestions = useMemo(() => {
     return contentVideoSuggestions.filter((item) => {
       const matchesSubject = subjectFilter === 'all' || item.subject === subjectFilter;
       const matchesQuery = !query || `${item.title} ${item.subjectLabel} ${item.suggestion}`.toLowerCase().includes(query.toLowerCase());
       return matchesSubject && matchesQuery;
-    });
-  }, [contentVideoSuggestions, query, subjectFilter]);
+    }).filter(item => !watchedVideos[item.videoId]);
+  }, [contentVideoSuggestions, query, subjectFilter, watchedVideos]);
 
   const watchedCount = Object.values(watchedVideos).filter(Boolean).length;
 

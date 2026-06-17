@@ -254,6 +254,7 @@ useEffect(() => {
     </button>
   </div>
 </header>
+  
             
           <main className="flex-1 px-4 pb-24 pt-4 lg:px-6 lg:pb-8">
             <Outlet />

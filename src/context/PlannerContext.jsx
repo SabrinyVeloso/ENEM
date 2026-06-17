@@ -8,7 +8,6 @@ import {
   getDaysUntilEnem,
   repertoires,
   buildAdaptiveSchedule,
-  buildFlashcardDeck,
   
   scheduleStart,
   priorityMeta,
@@ -21,6 +20,7 @@ import {
   toISODate,
   videoChannels
 } from '../data/planner';
+import { contentResources, subjectResources, generateSearchLinks } from '../data/contentResources';
 
 const STORAGE_KEY = 'enem-planner-state-v2';
 const THEME_KEY = 'enem-planner-theme-v2';
@@ -39,12 +39,11 @@ function readJSON(key, fallback) {
 function createDefaultState() {
   return {
     theme: readJSON(THEME_KEY, 'dark'),
-    settings: { ...settingsDefaults, studyStartDate: toISODate(new Date()) },
+    // Mark onboarding completed so the main UI is immediately visible by default
+    settings: { ...settingsDefaults, studyStartDate: toISODate(new Date()), onboardCompleted: true },
     contentStatuses: {},
     reviewQueue: [],
     reviewSchedule: {},
-    flashcardProgress: {},
-    flashcardHistory: [],
     watchedVideos: {},
     focusMode: false,
     essayDraft: { topic: '', text: '' },
@@ -65,8 +64,6 @@ function mergeState(base, incoming) {
   );
   next.reviewQueue = Array.isArray(incoming.reviewQueue) ? incoming.reviewQueue : [];
   next.reviewSchedule = { ...(incoming.reviewSchedule || {}) };
-  next.flashcardProgress = { ...(incoming.flashcardProgress || {}) };
-  next.flashcardHistory = Array.isArray(incoming.flashcardHistory) ? incoming.flashcardHistory : [];
   next.watchedVideos = { ...(incoming.watchedVideos || {}) };
   next.focusMode = Boolean(incoming.focusMode);
   next.essayDraft = { ...next.essayDraft, ...(incoming.essayDraft || {}) };
@@ -213,42 +210,63 @@ function buildCurrentStreak(state, scheduleData) {
   return streak;
 }
 
-function buildFlashcardAnalytics(state, scheduleData) {
-const deck = buildFlashcardDeck(
-  
- 
-  
-);
-  console.log('FLASHCARDS', deck);
-  const history = Array.isArray(state.flashcardHistory) ? state.flashcardHistory : [];
-  const correct = history.filter((entry) => entry.result === 'correct').length;
-  const incorrect = history.filter((entry) => entry.result === 'incorrect').length;
-  const total = correct + incorrect;
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const streak = deck.cards.reduce((acc, card) => Math.max(acc, card.streak || 0), 0);
-  const weeklyHistory = history.filter((entry) => {
-  
-    if (!entry.createdAt) return false;
-    const createdAt = new Date(entry.createdAt);
-    const diffDays = Math.floor((new Date() - createdAt) / 86400000);
-    return diffDays >= 0 && diffDays < 7;
-  });
-  const monthlyHistory = history.filter((entry) => {
-    if (!entry.createdAt) return false;
-    return entry.createdAt.startsWith(new Date().toISOString().slice(0, 7));
+function getWeeklyStudiedContents(state, scheduleData) {
+  // determine current week window (Sunday..Saturday)
+  const todayDate = new Date();
+  const startOfWeek = toISODate(addDays(todayDate, -todayDate.getDay()));
+  const endOfWeek = toISODate(addDays(fromISODate(startOfWeek), 6));
+
+  // collect items explicitly marked done this calendar week
+  const itemsThisWeek = getContentItems(scheduleData).filter((item) => {
+    const status = getContentStatus(state, item.id);
+    return status === 'done' && item.scheduledFor >= startOfWeek && item.scheduledFor <= endOfWeek;
   });
 
+  // fallback: if none found in this week, include all done items
+  const items = itemsThisWeek.length
+    ? itemsThisWeek
+    : getContentItems(scheduleData).filter((item) => getContentStatus(state, item.id) === 'done');
+
+  const contents = items.map((item) => {
+    const specific = contentResources[item.title] || [];
+    const fallback = subjectResources[item.subject] || [];
+    const usedSpecific = specific.length > 0;
+    const generated = generateSearchLinks(item.title);
+    const resources = [...(usedSpecific ? specific : fallback), ...generated];
+    return {
+      id: item.id,
+      title: item.title,
+      subject: item.subject,
+      subjectLabel: item.subjectLabel,
+      priorityRank: item.priorityRank || 0,
+      resources,
+      usingSubjectFallback: !usedSpecific,
+      scheduledFor: item.scheduledFor
+    };
+  });
+
+  // deduplicate by title
+  const dedup = [];
+  const seen = new Set();
+  contents.forEach((c) => {
+    if (!seen.has(c.title)) {
+      seen.add(c.title);
+      dedup.push(c);
+    }
+  });
+
+  dedup.sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
+  const resourcesFound = dedup.reduce((acc, c) => acc + (c.resources?.length || 0), 0);
+
+  // provide studyDays as the schedule days for the current week when available
+  const currentWeek = getCurrentWeek(scheduleData);
+  const studyDays = (currentWeek?.days || []).filter((d) => d.type === 'study' && d.contentId && d.date >= startOfWeek && d.date <= endOfWeek);
+
   return {
-    deck,
-    correct,
-    incorrect,
-    total,
-    accuracy,
-    streak,
-    weekly: weeklyHistory,
-    monthly: monthlyHistory,
-    subjectCounts: deck.subjectCounts,
-    dueCount: deck.dueCards.length
+    contents: dedup,
+    totalContents: dedup.length,
+    totalResources: resourcesFound,
+    studyDays
   };
 }
 
@@ -325,7 +343,7 @@ function buildDashboard(state, scheduleData) {
   const pending = allItems.length - completed - lost;
   const currentWeek = getCurrentWeek(scheduleData);
   const currentDay = getCurrentDay(scheduleData);
-  const flashcardAnalytics = buildFlashcardAnalytics(state, scheduleData);
+  const weeklyStudied = getWeeklyStudiedContents(state, scheduleData);
   const currentWeekStudyDays = currentWeek.days.filter((day) => day.type === 'study');
   const currentWeekDone = currentWeekStudyDays.filter((day) => getContentStatus(state, day.contentId) === 'done').length;
   const currentWeekProgress = Math.round((currentWeekDone / currentWeekStudyDays.length) * 100) || 0;
@@ -340,18 +358,38 @@ function buildDashboard(state, scheduleData) {
   const streak = buildCurrentStreak(state, scheduleData);
   const today = toISODate(new Date());
   const todayStudyItems = buildTodayStudyItems(state, scheduleData);
-  const todayReviewDay = currentDay?.type === 'review';
-  const todayReviewItems = todayReviewDay ? flashcardAnalytics.deck.dueCards.slice(0, 12) : [];
+  // determine review day from user settings (avoid depending on schedule dates)
+  const weekdayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const todayKey = weekdayKeys[new Date().getDay()];
+  const userStudyDays = Array.isArray(state.settings?.studyDays) ? state.settings.studyDays.filter((d) => weekdayKeys.includes(d)) : settingsDefaults.studyDays;
+  // allow user to mark the same day as study and review; respect user's explicit choice
+  const userReviewDays = Array.isArray(state.settings?.reviewDays) ? state.settings.reviewDays.filter((d) => weekdayKeys.includes(d)) : settingsDefaults.reviewDays;
+  const todayReviewDay = userReviewDays.includes(todayKey) || currentDay?.type === 'review';
+  const todayReviewItems = [];
   const overdueItems = buildOverdueItems(state, scheduleData);
   const reviewItems = allItems
     .filter((item) => getContentStatus(state, item.id) === 'perdido')
     .filter((item) => !state.reviewSchedule?.[item.id] || state.reviewSchedule[item.id] <= today)
     .sort((a, b) => (b.priorityRank || 0) - (a.priorityRank || 0));
-  const nextReviewItem = [...overdueItems, ...flashcardAnalytics.deck.dueCards].sort((a, b) => {
+  const nextReviewItem = [...overdueItems].sort((a, b) => {
     if (a.dueDate === b.dueDate) return (b.priorityRank || 0) - (a.priorityRank || 0);
     return a.dueDate.localeCompare(b.dueDate);
   })[0] || null;
   const nextReviewDate = nextReviewItem?.dueDate || null;
+  // If there is no queued review item, compute next review date from user settings
+  function getNextDateFromReviewDays(reviewDays, fromDate = new Date()) {
+    const weekdayMap = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+    const allowed = (Array.isArray(reviewDays) && reviewDays.length > 0) ? reviewDays.map((d) => weekdayMap[d]).filter((n) => typeof n === 'number') : [];
+    if (!allowed.length) return null;
+    const start = new Date(fromDate);
+    start.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 14; i += 1) {
+      const candidate = new Date(start);
+      candidate.setDate(start.getDate() + i);
+      if (allowed.includes(candidate.getDay())) return toISODate(candidate);
+    }
+    return null;
+  }
   const hoursAccumulated = Math.round((state.focusHistory.reduce((acc, item) => acc + item.minutes, 0) / 60) * 10) / 10;
   const progressDelta = currentWeekProgress - previousWeekProgress;
   const reminders = [];
@@ -376,10 +414,12 @@ function buildDashboard(state, scheduleData) {
     reminders.push({ tone: 'simulado', emoji: '🏆', title: `Você está há ${streak} dias estudando consecutivamente.`, description: 'Essa sequência é uma vantagem real na preparação.' });
   }
 
-  const nextReview = nextReviewDate
+  // prefer explicit next review item, otherwise derive next review date from user's reviewDays
+  const derivedNextReviewDate = nextReviewDate || getNextDateFromReviewDays(userReviewDays, new Date());
+  const nextReview = derivedNextReviewDate
     ? {
-        date: nextReviewDate,
-        label: formatNextReviewLabel(nextReviewDate),
+        date: derivedNextReviewDate,
+        label: formatNextReviewLabel(derivedNextReviewDate),
         title: nextReviewItem?.title || 'Próxima revisão',
         subjectLabel: nextReviewItem?.subjectLabel || 'Revisão',
         tone: nextReviewItem?.status === 'perdido' ? 'bad' : 'review'
@@ -421,17 +461,10 @@ function buildDashboard(state, scheduleData) {
     reminders,
     nextReview,
     motivations,
-    reviewDeck: flashcardAnalytics.deck.cards,
-    reviewDeckSize: flashcardAnalytics.deck.totalCards,
-    reviewDueCount: flashcardAnalytics.dueCount,
-    flashcardCorrect: flashcardAnalytics.correct,
-    flashcardIncorrect: flashcardAnalytics.incorrect,
-    flashcardAnswered: flashcardAnalytics.total,
-    flashcardAccuracy: flashcardAnalytics.accuracy,
-    flashcardStreak: flashcardAnalytics.streak,
-    flashcardWeeklyHistory: flashcardAnalytics.weekly,
-    flashcardMonthlyHistory: flashcardAnalytics.monthly,
-    flashcardSubjectCounts: flashcardAnalytics.subjectCounts,
+    revisionContents: weeklyStudied.contents,
+    revisionTotalContents: weeklyStudied.totalContents,
+    revisionResourcesTotal: weeklyStudied.totalResources,
+    studyDays: weeklyStudied.studyDays || [],
     essayCount: state.essays.length,
     questionCount: state.exerciseHistory.length,
     simuladoCount: state.simuladoHistory.length
@@ -584,54 +617,7 @@ export function PlannerProvider({ children }) {
           };
         });
       },
-      recordFlashcardResult(card, result) {
-        if (!card?.id) return;
-        const isCorrect = result === 'correct';
-        setState((current) => {
-          const progress = current.flashcardProgress || {};
-          const previous = progress[card.id] || {};
-          const previousCorrect = Number(previous.correct || 0);
-          const previousIncorrect = Number(previous.incorrect || 0);
-          const previousInterval = Number(previous.intervalDays || 1);
-          const previousEase = Number(previous.ease || 2.2);
-          const nextInterval = isCorrect
-            ? Math.min(30, Math.max(1, Math.round(previousInterval * (previousEase + 0.1))))
-            : 1;
-          const nextEase = isCorrect
-            ? Math.min(3, previousEase + 0.1)
-            : Math.max(1.3, previousEase - 0.2);
-          const nextProgress = {
-            correct: previousCorrect + (isCorrect ? 1 : 0),
-            incorrect: previousIncorrect + (isCorrect ? 0 : 1),
-            streak: isCorrect ? Number(previous.streak || 0) + 1 : 0,
-            intervalDays: nextInterval,
-            ease: nextEase,
-            nextDueAt: toISODate(addDays(new Date(), nextInterval)),
-            lastResult: isCorrect ? 'correct' : 'incorrect',
-            lastReviewedAt: new Date().toISOString()
-          };
-
-          return {
-            ...current,
-            flashcardProgress: {
-              ...progress,
-              [card.id]: nextProgress
-            },
-            flashcardHistory: [
-              {
-                id: `flashcard-${Date.now()}`,
-                createdAt: new Date().toISOString(),
-                cardId: card.id,
-                contentId: card.contentId,
-                subject: card.subject,
-                result: isCorrect ? 'correct' : 'incorrect',
-                sourceTitle: card.sourceTitle
-              },
-              ...(current.flashcardHistory || [])
-            ]
-          };
-        });
-      },
+      
       saveEssay(draft) {
         setState((current) => ({
           ...current,
@@ -739,92 +725,20 @@ export function PlannerProvider({ children }) {
     const adaptiveSchedule = state.generatedSchedule || buildAdaptiveSchedule(state.settings);
     const timing = getStudyStartTiming(state.settings);
 
+    // If study start is in the future we still derive the dashboard normally
+    // but mark the dashboard with `isBeforeStudyStart` and expose start metadata.
+
+    const dashboard = buildDashboard(state, adaptiveSchedule);
     if (timing.isBeforeStart) {
       const startLabel = fromISODate(timing.startISO).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-      const dashboardBefore = {
-        isBeforeStudyStart: true,
-        studyStartISO: timing.startISO,
-        studyStartLabel: startLabel,
-        daysUntilStudyStart: timing.daysUntilStart,
-        // other dashboard metrics zeroed until start
-        completion: 0,
-        completed: 0,
-        lost: 0,
-        pending: 0,
-        streak: 0,
-        currentWeek: null,
-        currentDay: null,
-        currentWeekProgress: 0,
-        monthProgress: 0,
-        previousWeekProgress: 0,
-        progressDelta: 0,
-        weekGoal: state.settings.weeklyGoal,
-        daysUntilEnem: getDaysUntilEnem(),
-        total: adaptiveSchedule.items.length,
-        hoursAccumulated: 0,
-        subjectStats: [],
-        heatmap: [],
-        achievements: [],
-        focusMinutes: 0,
-        reviewItems: [],
-        todayStudyItems: [],
-        todayReviewDay: false,
-        todayReviewItems: [],
-        overdueItems: [],
-        reminders: [],
-        nextReview: { date: null, label: 'Sem revisão agendada', title: 'Sem revisão' },
-        motivations: [],
-        reviewDeck: [],
-        reviewDeckSize: 0,
-        reviewDueCount: 0,
-        flashcardCorrect: 0,
-        flashcardIncorrect: 0,
-        flashcardAnswered: 0,
-        flashcardAccuracy: 0,
-        flashcardStreak: 0,
-        flashcardWeeklyHistory: [],
-        flashcardMonthlyHistory: [],
-        flashcardSubjectCounts: {},
-        essayCount: state.essays.length,
-        questionCount: state.exerciseHistory.length,
-        simuladoCount: state.simuladoHistory.length
-      };
-
-      return {
-        dashboard: dashboardBefore,
-        currentWeek: null,
-        currentDay: null,
-        subjectStats: [],
-        heatmap: [],
-        contentItems: adaptiveSchedule.items,
-        contentBySubject: {
-          math: getContentBySubject(adaptiveSchedule, 'math'),
-          language: getContentBySubject(adaptiveSchedule, 'language'),
-          humanas: getContentBySubject(adaptiveSchedule, 'humanas'),
-          nature: getContentBySubject(adaptiveSchedule, 'nature'),
-          essay: getContentBySubject(adaptiveSchedule, 'essay')
-        },
-        videoChannels,
-        baseQuestions,
-        essayTopics,
-        repertoires,
-        connectors,
-        themePalette: (() => {
-          const mode = state.settings?.themeMode || state.theme || 'dark';
-          const accent = state.settings?.accentColor || 'blue';
-          const base = themePalettes[mode] || themePalettes.dark;
-          const accentDef = accentColors[accent] || accentColors.blue;
-          return { ...base, ...accentDef };
-        })(),
-        subjectMeta,
-        schedule: adaptiveSchedule,
-        scheduleStart,
-        enemDate
-      };
+      dashboard.isBeforeStudyStart = true;
+      dashboard.studyStartISO = timing.startISO;
+      dashboard.studyStartLabel = startLabel;
+      dashboard.daysUntilStudyStart = timing.daysUntilStart;
     }
 
     return {
-      dashboard: buildDashboard(state, adaptiveSchedule),
+      dashboard,
       currentWeek: getCurrentWeek(adaptiveSchedule),
       currentDay: getCurrentDay(adaptiveSchedule),
       subjectStats: buildSubjectStats(state, adaptiveSchedule),

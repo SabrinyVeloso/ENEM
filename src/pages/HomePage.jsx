@@ -12,20 +12,31 @@ function statusLabel(status) {
 }
 
 function StudyItemCard({ item, onStatus }) {
+  const bgClass = item.status === 'done' ? 'bg-emerald-500/10' : item.status === 'perdido' ? 'bg-rose-500/10' : 'bg-[rgba(255,255,255,0.02)]';
+
   return (
-    <div className="rounded-[24px] border border-[var(--border)] bg-white/5 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--muted)]">{item.subjectLabel}</p>
-          <strong className="mt-1 block text-base font-black tracking-tight text-[var(--text)]">{item.title}</strong>
-          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">{item.description}</p>
+    <div className={`rounded-[18px] border border-[var(--border)] ${bgClass} p-4 shadow-sm w-full flex flex-col justify-between`}>
+      <div className="flex items-start gap-3">
+        <div className="w-full">
+          <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--muted)]">{item.subjectLabel}</p>
+          <strong className="block mt-1 text-2xl font-extrabold text-[var(--text)] leading-tight">{item.title}</strong>
+          {item.description ? <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.description}</p> : null}
           <div className="mt-3 flex flex-wrap gap-2">
             <StatusBadge status={item.priority}>{item.priorityLabel}</StatusBadge>
             <StatusBadge status={item.status}>{statusLabel(item.status)}</StatusBadge>
             {item.isRescheduled ? <StatusBadge status="review">Reagendado</StatusBadge> : null}
           </div>
+
+          {(item.resources || []).filter(r => !/videoaula|vídeo|video/i.test(r.title)).length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(item.resources || []).filter(r => !/videoaula|vídeo|video/i.test(r.title)).map((r, i) => (
+                <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[var(--border)] bg-[rgba(255,255,255,0.03)] text-sm font-semibold text-[var(--text)] hover:bg-[rgba(255,255,255,0.06)]">
+                  {r.title}
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
-        <StatusBadge status={item.status}>{statusLabel(item.status)}</StatusBadge>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">
@@ -87,9 +98,19 @@ export default function HomePage() {
   }
 
   const reminders = dashboard.reminders.slice(0, 3);
-  const todayItems = dashboard.todayReviewDay ? dashboard.todayReviewItems.slice(0, 4) : dashboard.todayStudyItems.slice(0, 4);
+  const sourceTodayItems = dashboard.todayReviewDay ? dashboard.todayReviewItems : dashboard.todayStudyItems;
+  const statusOrderMap = { pending: 0, perdido: 1, done: 2 };
+  const orderedTodayItems = (Array.isArray(sourceTodayItems) ? [...sourceTodayItems] : [])
+    .sort((a, b) => {
+      const sa = statusOrderMap[a.status] ?? 0;
+      const sb = statusOrderMap[b.status] ?? 0;
+      if (sa !== sb) return sa - sb;
+      // fallback: priorityRank desc
+      return (b.priorityRank || 0) - (a.priorityRank || 0);
+    })
+    .slice(0, 4);
   const motivation = dashboard.motivations[0];
-  const hasMoreToday = dashboard.todayReviewDay ? dashboard.todayReviewItems.length > todayItems.length : dashboard.todayStudyItems.length > todayItems.length;
+  const hasMoreToday = dashboard.todayReviewDay ? dashboard.todayReviewItems.length > orderedTodayItems.length : dashboard.todayStudyItems.length > orderedTodayItems.length;
   const nextActiveDay = schedule.weeks.flatMap((week) => week.days).find((day) => day.date > today && (day.type === 'study' || day.type === 'review'));
   const nextStudyMessage = dashboard.todayReviewDay
     ? 'Hoje é dia de revisar.'
@@ -132,17 +153,15 @@ export default function HomePage() {
         </GlassCard>
 
         <GlassCard className="p-4 sm:p-5">
-          <SectionHeader eyebrow={dashboard.todayReviewDay ? 'Revisão de hoje' : 'Estudos de hoje'} title={dashboard.todayReviewDay ? 'Flashcards e revisão espaçada' : 'Conteúdos programados'} />
+          <SectionHeader eyebrow={dashboard.todayReviewDay ? 'Revisão de hoje' : 'Estudos de hoje'} title={dashboard.todayReviewDay ? 'Atividades de revisão' : 'Conteúdos programados'} />
           <div className="mt-4 grid gap-3">
-            {todayItems.length === 0 ? (
-              <EmptyState title={dashboard.todayReviewDay ? 'Sem flashcards para hoje' : 'Sem estudos para hoje'} subtitle={dashboard.todayReviewDay ? 'Ainda não há cartões liberados para a revisão de hoje.' : 'Seu cronograma não tem novos itens programados para hoje.'} />
-            ) : dashboard.todayReviewDay ? (
-              todayItems.map((item) => <ReviewItemCard key={item.id} item={item} onResult={actions.recordFlashcardResult} />)
+            {orderedTodayItems.length === 0 ? (
+              <EmptyState title={dashboard.todayReviewDay ? 'Sem atividades de revisão para hoje' : 'Sem estudos para hoje'} subtitle={dashboard.todayReviewDay ? 'Ainda não há atividades recomendadas para a revisão de hoje.' : 'Seu cronograma não tem novos itens programados para hoje.'} />
             ) : (
-              todayItems.map((item) => <StudyItemCard key={item.id} item={item} onStatus={actions.setContentStatus} />)
+              orderedTodayItems.map((item) => <StudyItemCard key={item.id} item={item} onStatus={actions.setContentStatus} />)
             )}
           </div>
-          {hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {(dashboard.todayReviewDay ? dashboard.todayReviewItems.length : dashboard.todayStudyItems.length) - todayItems.length} itens também estão programados para hoje.</p> : null}
+          {hasMoreToday ? <p className="mt-3 text-sm font-semibold text-[var(--muted)]">+ {(dashboard.todayReviewDay ? dashboard.todayReviewItems.length : dashboard.todayStudyItems.length) - orderedTodayItems.length} itens também estão programados para hoje.</p> : null}
         </GlassCard>
       </section>
 

@@ -629,16 +629,7 @@ function getCurrentWeekData(scheduleData, referenceDate = new Date()) {
   return scheduleData?.weeks?.find((week) => week.days.some((day) => day.date === today)) || scheduleData?.weeks?.[0] || null;
 }
 
-function getWeeklyFlashcardSources(state = {}, scheduleData = buildAdaptiveSchedule(state.settings || {})) {
-  const contentItems = getContentItems(scheduleData);
-  const currentWeek = getCurrentWeekData(scheduleData);
-  const weekStudyItems = (currentWeek?.days || [])
-    .filter((day) => day.type === 'study' && day.contentId)
-    .map((day) => contentItems.find((item) => item.id === day.contentId))
-    .filter(Boolean);
-  const completedItems = weekStudyItems.filter((item) => getContentStatus(state, item.id) === 'done');
-  return completedItems.length > 0 ? completedItems : weekStudyItems;
-}
+// Weekly studied sources are handled by PlannerContext.
 
 function pickWeeklyTopic(list, weekIndex) {
   return list[Math.min(weekIndex, list.length - 1)];
@@ -782,35 +773,7 @@ export function buildSchedule() {
   return { weeks, items };
 }
 
-function buildFlashcardPrompt(item, variantIndex) {
-  const title = item.title.toLowerCase();
-  const description = item.description;
-  const promptSets = {
-    math: [
-      { front: `O que é ${title}?`, back: description },
-      { front: `Como lembrar ${title}?`, back: `Associe com ${description.toLowerCase()}.` }
-    ],
-    language: [
-      { front: `O que é ${title}?`, back: description },
-      { front: `Como ${title} ajuda na prova?`, back: 'Ele reforça leitura, sentido e análise de texto no ENEM.' }
-    ],
-    humanas: [
-      { front: `O que estuda ${title}?`, back: description },
-      { front: `Por que ${title} é importante?`, back: 'Porque ajuda a interpretar sociedade, território e relações de poder.' }
-    ],
-    nature: [
-      { front: `O que é ${title}?`, back: description },
-      { front: `Como ${title} aparece no cotidiano?`, back: 'Ele se conecta com saúde, ambiente, tecnologia e fenômenos observáveis.' }
-    ],
-    essay: [
-      { front: `Qual é a função de ${title}?`, back: description },
-      { front: `Como usar ${title} na redação?`, back: 'Use isso para organizar tese, argumentação e fechamento textual.' }
-    ]
-  };
-
-  const options = promptSets[item.subject] || promptSets.math;
-  return options[variantIndex % options.length];
-}
+// Prompt generator removed (not used).
 
 function buildBalancedStudySelection(studiedItems, limit) {
   const subjectBuckets = studyOrder.reduce((acc, subject) => {
@@ -837,85 +800,7 @@ function buildBalancedStudySelection(studiedItems, limit) {
   return selection;
 }
 
-export function buildFlashcardDeck(state = {}, scheduleData = buildAdaptiveSchedule(state.settings || {}), limit = 50) {
- console.log('ENTROU EM buildFlashcardDeck');
-  const today = getTodayISO();
-  const studiedItems = (getWeeklyFlashcardSources(state, scheduleData).length > 0
-    ? getWeeklyFlashcardSources(state, scheduleData)
-    : getContentItems(scheduleData).filter((item) => getContentStatus(state, item.id) === 'done'))
-    .sort((a, b) => {
-      if (a.scheduledFor === b.scheduledFor) return (b.priorityRank || 0) - (a.priorityRank || 0);
-      return (b.scheduledFor || '').localeCompare(a.scheduledFor || '');
-    });
- 
- 
- 
-const selectedItems = buildBalancedStudySelection(
-  studiedItems,
-  limit
-);
-
-console.log('Studied Items:', studiedItems.length);
- console.log('Selected Items:', selectedItems.length);
-const progress = state.flashcardProgress || {};
-const cards = [];
-
-console.log('Cards:', cards);
-console.log('Schedule:', scheduleData);
-console.log('Hoje:', new Date().toISOString().slice(0, 10));
-  selectedItems.forEach((item) => {
-    [0, 1].forEach((variantIndex) => {
-      const cardId = `${item.id}-flash-${variantIndex + 1}`;
-      const progressEntry = progress[cardId] || {};
-      const prompt = buildFlashcardPrompt(item, variantIndex);
-      const correct = Number(progressEntry.correct || 0);
-      const incorrect = Number(progressEntry.incorrect || 0);
-      const dueDate = progressEntry.nextDueAt || today;
-      const weight = Math.max(1, 3 + incorrect - correct);
-
-      cards.push({
-        id: cardId,
-        contentId: item.id,
-        subject: item.subject,
-        subjectLabel: item.subjectLabel,
-        sourceTitle: item.title,
-        front: prompt.front,
-        back: prompt.back,
-        dueDate,
-        correct,
-        incorrect,
-        streak: Number(progressEntry.streak || 0),
-        intervalDays: Number(progressEntry.intervalDays || 1),
-        ease: Number(progressEntry.ease || 2.2),
-        weight,
-        lastResult: progressEntry.lastResult || null,
-        lastReviewedAt: progressEntry.lastReviewedAt || null,
-        status: dueDate <= today ? 'due' : 'scheduled'
-      });
-    });
-  });
-
-  const sorted = cards.sort((a, b) => {
-    if (a.dueDate === b.dueDate) {
-    return b.weight - a.weight;
-   }
-
-    return a.dueDate.localeCompare(b.dueDate);
-  });
-
- console.log('Cards gerados:', cards.length);
-
-  return {
-    cards: sorted.slice(0, limit),
-    studiedItems: selectedItems,
-    totalCards: sorted.length,
-    dueCards: sorted.filter((card) => card.status === 'due'),
-    subjectCounts: selectedItems.reduce((acc, item) => {
-      acc[item.subject] = (acc[item.subject] || 0) + 2;
-      return acc;
-    }, {})
-  };
-}
+// Deck generation removed — revisions use external resources instead of Q&A cards.
 
 export const schedule = buildSchedule();
 
@@ -1028,9 +913,9 @@ export function buildAdaptiveSchedule(settings = {}) {
         subject: 'review',
         subjectLabel: 'Revisão',
         title: 'Revisão exclusiva',
-        description: 'Flashcards, resumos e exercícios de revisão sem conteúdo novo.',
+        description: 'Atividades, resumos e exercícios de revisão sem conteúdo novo.',
         contentId: null,
-        blocks: ['Flashcards', 'Resumo', 'Exercícios']
+        blocks: ['Atividades', 'Resumo', 'Exercícios']
       };
     } else if (isStudyDay && queueIndex < topicQueue.length) {
       const assignedTopics = topicQueue.slice(queueIndex, queueIndex + topicsPerSession);

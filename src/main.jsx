@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { PlannerProvider } from './context/PlannerContext';
 import './styles/index.css';
+import ErrorBoundary from './components/ErrorBoundary';
 
 if (import.meta.env.PROD) {
   const manifestLink = document.createElement('link');
@@ -21,9 +22,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <PlannerProvider>
-      <HashRouter>
-        <App />
-      </HashRouter>
+      <ErrorBoundary>
+        <HashRouter>
+          <App />
+        </HashRouter>
+      </ErrorBoundary>
     </PlannerProvider>
   </React.StrictMode>
 );
